@@ -78,8 +78,31 @@ final class Client {
         (messages ?? []).sorted { $0.timestamp < $1.timestamp }
     }
 
+    /// Demo thread — drafted and answered by the on-device model.
+    var demoMessages: [ChatMessage] {
+        sortedMessages.filter { !$0.isLive }
+    }
+
+    /// Live thread — messages that really went out, plus replies the owner
+    /// logged after reading them in WhatsApp or Messages.
+    var liveMessages: [ChatMessage] {
+        sortedMessages.filter(\.isLive)
+    }
+
+    var hasLiveConversation: Bool { !liveMessages.isEmpty }
+
+    /// When the client last wrote back on the live thread. Used as the
+    /// starting point when polling a relay for new inbound messages.
+    var lastLiveInboundAt: Date? {
+        liveMessages.last { !$0.isFromOwner }?.timestamp
+    }
+
     var hasResponded: Bool {
         (messages ?? []).contains { $0.isFromOwner }
+    }
+
+    var hasUsablePhone: Bool {
+        PhoneNumber.e164(phone) != nil
     }
 
     var scheduleDescription: String {

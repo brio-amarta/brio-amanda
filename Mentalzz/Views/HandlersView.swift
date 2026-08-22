@@ -293,5 +293,5 @@ struct HandlerDetailView: View {
         HandlersView()
     }
     .modelContainer(PreviewData.container)
-    .environment(ChatService())
+    .previewServices()
 }

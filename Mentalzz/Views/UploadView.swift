@@ -205,5 +205,5 @@ struct UploadView: View {
         UploadView(onFinished: {})
     }
     .modelContainer(PreviewData.container)
-    .environment(TriageService())
+    .previewServices()
 }

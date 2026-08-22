@@ -10,6 +10,7 @@ import SwiftUI
 import SwiftData
 import Foundation
 import UIKit
+import MessageUI
 
 struct ClientDetailView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -150,7 +151,7 @@ struct ClientProfilePane: View {
             } header: {
                 Text("Scheduling")
             } footer: {
-                Text("Only slots the handler has free are offered. Sessions run 90 minutes between 08:00 and 17:00.")
+                Text("Only slots the handler has free are offered. Sessions run \(SchedulingService.sessionLengthPhrase) between \(String(format: "%02d:%02d", SchedulingService.configuration.openingHour, SchedulingService.configuration.openingMinute)) and \(String(format: "%02d:%02d", SchedulingService.configuration.closingHour, SchedulingService.configuration.closingMinute)). Change these in Settings.")
             }
         }
         .listStyle(.insetGrouped)
@@ -235,30 +236,70 @@ struct ClientProfilePane: View {
 
 // MARK: - Chat
 
+/// Which thread the pane is showing. Demo is the model's roleplay; Live is
+/// the real conversation the owner is having on WhatsApp or Messages.
+enum ChatMode: String, CaseIterable, Identifiable {
+    case demo = "Demo"
+    case live = "Live"
+
+    var id: String { rawValue }
+    var symbol: String { self == .demo ? "sparkles" : "paperplane.fill" }
+}
+
 struct ClientChatPane: View {
     @Environment(\.modelContext) private var context
     @Environment(ChatService.self) private var chat
+    @Environment(MessagingService.self) private var messaging
     @Bindable var client: Client
 
+    @State private var mode: ChatMode = .demo
     @State private var draft = ""
     @State private var hasPrefilled = false
 
+    // Live mode
+    @State private var showSystemComposer = false
+    @State private var pendingLiveMessage: ChatMessage?
+    @State private var showLogReply = false
+    @State private var loggedReply = ""
+    @State private var errorMessage: String?
+    @State private var isPolling = false
+
+    private var visibleMessages: [ChatMessage] {
+        mode == .demo ? client.demoMessages : client.liveMessages
+    }
+
+    private var errorAlertBinding: Binding<Bool> {
+        Binding { errorMessage != nil } set: { if !$0 { errorMessage = nil } }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
+            modePicker
+
+            if mode == .live {
+                liveBanner
+            }
+
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 10) {
-                        Text("Today")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 12)
-
-                        ForEach(client.sortedMessages) { message in
-                            MessageBubble(message: message)
-                                .id(message.persistentModelID)
+                        if visibleMessages.isEmpty {
+                            emptyThread
+                        } else {
+                            Text("Today")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 12)
                         }
 
-                        if chat.isReplying {
+                        ForEach(visibleMessages) { message in
+                            MessageBubble(message: message) {
+                                confirmSent(message)
+                            }
+                            .id(message.persistentModelID)
+                        }
+
+                        if mode == .demo && chat.isReplying {
                             HStack {
                                 TypingIndicator()
                                 Spacer()
@@ -269,9 +310,9 @@ struct ClientChatPane: View {
                     }
                     .padding(.bottom, 8)
                 }
-                .onChange(of: client.sortedMessages.count) { _, _ in
+                .onChange(of: visibleMessages.count) { _, _ in
                     withAnimation {
-                        proxy.scrollTo(client.sortedMessages.last?.persistentModelID, anchor: .bottom)
+                        proxy.scrollTo(visibleMessages.last?.persistentModelID, anchor: .bottom)
                     }
                 }
             }
@@ -281,11 +322,99 @@ struct ClientChatPane: View {
         }
         .background(Color(.systemGroupedBackground))
         .task {
-            guard !hasPrefilled, client.sortedMessages.isEmpty, draft.isEmpty else { return }
+            guard !hasPrefilled, client.demoMessages.isEmpty, draft.isEmpty else { return }
             hasPrefilled = true
             draft = await chat.draftOpener(for: client)
         }
+        .sheet(isPresented: $showSystemComposer) {
+            if let number = PhoneNumber.e164(client.phone, defaultCountryCode: messaging.defaultCountryCode),
+               let pending = pendingLiveMessage {
+                SystemMessageComposer(recipient: "+" + number, body: pending.text) { result in
+                    finishSystemCompose(result, for: pending)
+                }
+                .ignoresSafeArea()
+            }
+        }
+        .alert("What did they say?", isPresented: $showLogReply) {
+            TextField("Their reply", text: $loggedReply)
+            Button("Save") { saveLoggedReply() }
+            Button("Cancel", role: .cancel) { loggedReply = "" }
+        } message: {
+            Text("Paste or type what \(client.name) sent back, so the thread here matches the real one.")
+        }
+        .alert("Couldn't send", isPresented: errorAlertBinding) {
+            Button("OK") { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
+        }
     }
+
+    // MARK: - Header
+
+    private var modePicker: some View {
+        Picker("Thread", selection: $mode) {
+            ForEach(ChatMode.allCases) { option in
+                Label(option.rawValue, systemImage: option.symbol).tag(option)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
+    /// Live mode is the one that can actually reach a person, so it says
+    /// exactly where the message is about to go before anything is sent.
+    private var liveBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: messaging.channel.symbol)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Sends via \(messaging.channel.rawValue)")
+                    .font(.caption.weight(.semibold))
+                Text(client.hasUsablePhone
+                     ? PhoneNumber.display(client.phone, defaultCountryCode: messaging.defaultCountryCode)
+                     : "No usable phone number")
+                .font(.caption2)
+                .foregroundStyle(client.hasUsablePhone ? .secondary : .red)
+            }
+            Spacer()
+            if messaging.channel == .relay {
+                Button {
+                    Task { await pollRelay() }
+                } label: {
+                    if isPolling {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                .disabled(!messaging.isRelayConfigured || isPolling)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color(.secondarySystemBackground))
+    }
+
+    private var emptyThread: some View {
+        VStack(spacing: 6) {
+            Image(systemName: mode == .demo ? "sparkles" : "paperplane")
+                .font(.title2)
+                .foregroundStyle(.secondary)
+            Text(mode == .demo ? "No demo messages yet" : "No real messages yet")
+                .font(.callout.weight(.medium))
+            Text(mode == .demo
+                 ? "Anything here is written by the on-device model. It never leaves the iPad."
+                 : "Messages you send here really go to \(client.name).")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 32)
+        .padding(.top, 48)
+    }
+
+    // MARK: - Composer
 
     private var composer: some View {
         VStack(spacing: 8) {
@@ -300,11 +429,24 @@ struct ClientChatPane: View {
             }
 
             HStack(alignment: .bottom, spacing: 10) {
-                TextField("Message", text: $draft, axis: .vertical)
+                TextField(mode == .demo ? "Message" : "Message (sends for real)", text: $draft, axis: .vertical)
                     .lineLimit(1...6)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 9)
                     .background(Color(.secondarySystemBackground), in: .capsule)
+
+                if mode == .live {
+                    Button {
+                        loggedReply = ""
+                        showLogReply = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 18))
+                    }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.circle)
+                    .help("Log a reply you received")
+                }
 
                 Button {
                     Task { await regenerate() }
@@ -318,26 +460,53 @@ struct ClientChatPane: View {
                 .help("Redraft with the on-device model")
 
                 Button {
-                    send()
+                    Task { await send() }
                 } label: {
-                    Image(systemName: "paperplane.fill")
-                        .font(.system(size: 18))
+                    if messaging.isSending {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: mode == .demo ? "paperplane.fill" : "arrow.up.forward.app.fill")
+                            .font(.system(size: 18))
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.circle)
-                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || chat.isReplying)
+                .disabled(sendDisabled)
+            }
+
+            if mode == .live {
+                Text(messaging.channel.needsHandoff
+                     ? "You'll confirm the send in \(messaging.channel.rawValue)."
+                     : "Sent through your relay server.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(12)
         .background(.bar)
     }
 
-    // MARK: - Actions
+    private var sendDisabled: Bool {
+        if draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        if messaging.isSending { return true }
+        if mode == .demo { return chat.isReplying }
+        return !client.hasUsablePhone
+    }
 
-    private func send() {
+    // MARK: - Sending
+
+    private func send() async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
+        switch mode {
+        case .demo: sendDemo(text)
+        case .live: await sendLive(text)
+        }
+    }
+
+    private func sendDemo(_ text: String) {
         let outgoing = ChatMessage(text: text, isFromOwner: true)
         outgoing.client = client
         context.insert(outgoing)
@@ -345,7 +514,7 @@ struct ClientChatPane: View {
         try? context.save()
 
         Task {
-            let reply = await chat.generateReply(for: client, history: client.sortedMessages)
+            let reply = await chat.generateReply(for: client, history: client.demoMessages)
             let incoming = ChatMessage(text: reply, isFromOwner: false, isGenerated: true)
             incoming.client = client
             context.insert(incoming)
@@ -356,6 +525,125 @@ struct ClientChatPane: View {
         }
     }
 
+    private func sendLive(_ text: String) async {
+        // The message is recorded first so nothing is lost if the handoff
+        // fails or the owner backs out of the other app.
+        let outgoing = ChatMessage(
+            text: text,
+            isFromOwner: true,
+            isLive: true,
+            channel: messaging.channel,
+            delivery: .pending
+        )
+        outgoing.client = client
+        context.insert(outgoing)
+        draft = ""
+        try? context.save()
+
+        if messaging.channel == .iMessage {
+            guard SystemMessageComposer.canSend else {
+                outgoing.delivery = .failed
+                errorMessage = MessagingError.channelUnavailable(.iMessage).localizedDescription
+                try? context.save()
+                return
+            }
+            pendingLiveMessage = outgoing
+            showSystemComposer = true
+            return
+        }
+
+        let outcome = await messaging.send(text, to: client)
+        outgoing.delivery = outcome.delivery
+        if case .failed(let error) = outcome {
+            errorMessage = error.localizedDescription
+        } else {
+            markContacted()
+        }
+        try? context.save()
+    }
+
+    private func finishSystemCompose(_ result: MessageComposeResult, for message: ChatMessage) {
+        showSystemComposer = false
+        pendingLiveMessage = nil
+        switch result {
+        case .sent:
+            message.delivery = .sent
+            markContacted()
+        case .cancelled:
+            message.delivery = .pending
+        case .failed:
+            message.delivery = .failed
+            errorMessage = "iOS couldn't send that message."
+        @unknown default:
+            message.delivery = .pending
+        }
+        try? context.save()
+    }
+
+    /// The owner ticking off a message they finished sending in another app.
+    private func confirmSent(_ message: ChatMessage) {
+        guard message.needsConfirmation else { return }
+        message.delivery = .sent
+        markContacted()
+        try? context.save()
+    }
+
+    private func saveLoggedReply() {
+        let text = loggedReply.trimmingCharacters(in: .whitespacesAndNewlines)
+        loggedReply = ""
+        guard !text.isEmpty else { return }
+
+        let incoming = ChatMessage(
+            text: text,
+            isFromOwner: false,
+            isLive: true,
+            channel: messaging.channel,
+            delivery: .delivered
+        )
+        incoming.client = client
+        context.insert(incoming)
+        if client.status == .noResponse || client.status == .newIntake {
+            client.status = .inProgress
+        }
+        try? context.save()
+    }
+
+    private func pollRelay() async {
+        isPolling = true
+        defer { isPolling = false }
+
+        let since = client.lastLiveInboundAt ?? Date.now.addingTimeInterval(-7 * 24 * 3600)
+        let inbound = await messaging.fetchInbound(for: client, since: since)
+        guard !inbound.isEmpty else { return }
+
+        for item in inbound {
+            let message = ChatMessage(
+                text: item.text,
+                isFromOwner: false,
+                isLive: true,
+                channel: .relay,
+                delivery: .delivered,
+                timestamp: item.timestamp
+            )
+            message.client = client
+            context.insert(message)
+        }
+        if client.status == .noResponse || client.status == .newIntake {
+            client.status = .inProgress
+        }
+        try? context.save()
+    }
+
+    /// A real message going out means this person is no longer untouched.
+    private func markContacted() {
+        if client.status == .newIntake || client.status == .noResponse {
+            client.status = .inProgress
+        }
+        if client.status == .waitingForAppointment && client.scheduledAt != nil {
+            client.status = .scheduled
+        }
+    }
+
     private func regenerate() async {
         draft = await chat.draftOpener(for: client)
     }
@@ -363,6 +651,8 @@ struct ClientChatPane: View {
 
 struct MessageBubble: View {
     let message: ChatMessage
+    /// Called when the owner ticks off a message they sent in another app.
+    var onConfirmSent: () -> Void = {}
 
     var body: some View {
         HStack {
@@ -373,24 +663,48 @@ struct MessageBubble: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .foregroundStyle(message.isFromOwner ? .white : .primary)
-                    .background(
-                        message.isFromOwner ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
-                        in: .rect(cornerRadius: 20)
-                    )
+                    .background(bubbleFill, in: .rect(cornerRadius: 20))
 
                 HStack(spacing: 4) {
                     if message.isGenerated {
                         Image(systemName: "sparkles")
                     }
                     Text(message.timestamp.formatted(date: .omitted, time: .shortened))
+
+                    if message.isLive && message.isFromOwner {
+                        Image(systemName: message.delivery.symbol)
+                        Text(message.delivery.label)
+                    }
                 }
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(message.delivery == .failed ? .red : .secondary)
+
+                // A deep link can't tell us whether the owner actually tapped
+                // send in WhatsApp, so they say so here.
+                if message.needsConfirmation {
+                    Button("Mark as sent", systemImage: "checkmark.circle") {
+                        onConfirmSent()
+                    }
+                    .font(.caption2)
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                }
             }
 
             if !message.isFromOwner { Spacer(minLength: 60) }
         }
         .padding(.horizontal, 16)
+    }
+
+    private var bubbleFill: AnyShapeStyle {
+        guard message.isFromOwner else {
+            return AnyShapeStyle(Color(.secondarySystemGroupedBackground))
+        }
+        if message.delivery == .failed { return AnyShapeStyle(Color.red) }
+        // Live messages sit in a deeper shade so a real send never looks like
+        // a demo one at a glance.
+        if message.isLive { return AnyShapeStyle(Color.green.mix(with: .black, by: 0.15)) }
+        return AnyShapeStyle(Color.accentColor)
     }
 }
 

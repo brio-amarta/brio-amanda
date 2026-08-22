@@ -12,7 +12,7 @@ import SwiftData
 struct MentalzzApp: App {
 
     let container: ModelContainer = {
-        let schema = Schema([Client.self, Handler.self, ChatMessage.self])
+        let schema = Schema([Client.self, Handler.self, ChatMessage.self, CommunitySettings.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
             return try ModelContainer(for: schema, configurations: [configuration])
@@ -24,11 +24,8 @@ struct MentalzzApp: App {
         }
     }()
 
-    init() {
-        // Restore the owner's weekday preference before anything schedules.
-        SchedulingService.weekdaysOnly =
-            UserDefaults.standard.object(forKey: "weekdaysOnly") as? Bool ?? true
-    }
+    // Scheduling preferences now live in CommunitySettings and are loaded by
+    // RootView once the model context exists.
 
     var body: some Scene {
         WindowGroup {

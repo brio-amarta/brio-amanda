@@ -80,7 +80,7 @@ struct OverviewView: View {
                 Text(ownerName)
                     .font(.largeTitle.bold())
                 NavigationLink {
-                    OwnerSettingsView()
+                    SettingsView()
                 } label: {
                     HStack(spacing: 4) {
                         Text(ownerRole)
@@ -230,49 +230,10 @@ struct StatTile: View {
     }
 }
 
-// MARK: - Owner settings
-
-struct OwnerSettingsView: View {
-    @AppStorage("ownerName") private var ownerName = "Community Owner"
-    @AppStorage("ownerRole") private var ownerRole = "Admin"
-    @AppStorage("weekdaysOnly") private var weekdaysOnly = true
-    @Environment(TriageService.self) private var triage
-
-    var body: some View {
-        Form {
-            Section("Profile") {
-                TextField("Name", text: $ownerName)
-                TextField("Role", text: $ownerRole)
-            }
-
-            Section {
-                Toggle("Weekdays only", isOn: $weekdaysOnly)
-                    .onChange(of: weekdaysOnly) { _, newValue in
-                        SchedulingService.weekdaysOnly = newValue
-                    }
-                LabeledContent("Community hours", value: "08:00 – 17:00")
-                LabeledContent("Session length", value: "90 minutes")
-                LabeledContent("Slots per day", value: "\(SchedulingService.slotsPerDay)")
-            } header: {
-                Text("Community")
-            } footer: {
-                Text("Sessions run back to back from 08:00, so the last one starts at 15:30.")
-            }
-
-            Section("On-device intelligence") {
-                Label(triage.availabilityMessage, systemImage: triage.isModelAvailable ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                    .foregroundStyle(triage.isModelAvailable ? .primary : .secondary)
-            }
-        }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
 #Preview {
     NavigationStack {
         OverviewView(onSelectCategory: { _ in })
     }
     .modelContainer(PreviewData.container)
-    .environment(TriageService())
+    .previewServices()
 }

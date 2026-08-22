@@ -266,5 +266,5 @@ struct ClientRow: View {
         ScheduleView(priority: nil)
     }
     .modelContainer(PreviewData.container)
-    .environment(ChatService())
+    .previewServices()
 }

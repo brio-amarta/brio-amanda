@@ -12,7 +12,7 @@ import SwiftData
 enum PreviewData {
 
     static let container: ModelContainer = {
-        let schema = Schema([Client.self, Handler.self, ChatMessage.self])
+        let schema = Schema([Client.self, Handler.self, ChatMessage.self, CommunitySettings.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: schema, configurations: [configuration])
         seed(into: container.mainContext)
@@ -20,6 +20,9 @@ enum PreviewData {
     }()
 
     static func seed(into context: ModelContext) {
+        // Settings first — the scheduler reads them while seeding.
+        CommunitySettings.current(in: context).apply()
+
         let handlers = ["Winda Ratnasari", "Gede Arya", "Putu Melati"].enumerated().map { index, name in
             Handler(name: name, colorIndex: index)
         }

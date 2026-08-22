@@ -2,7 +2,10 @@
 //  SchedulingService.swift
 //  Mentalzz
 //
-//  Community hours are 08:00–17:00, six 90-minute slots a day.
+//  Community hours, session length and slots per day all come from
+//  CommunitySettings, which the owner edits in Settings. This file holds the
+//  live snapshot of those values plus the assignment logic.
+//
 //  Clients are sorted by priority, then urgency, then score, and dropped into
 //  the earliest slot where their randomly assigned handler is free.
 //
@@ -10,10 +13,39 @@
 import Foundation
 import SwiftData
 
+/// A plain value snapshot of the owner's scheduling preferences.
+/// Explicitly nonisolated so the scheduler can read it from default arguments
+/// and background contexts without hopping to the main actor.
+nonisolated struct SchedulingConfiguration: Equatable, Sendable {
+    var openingHour: Int = 8
+    var openingMinute: Int = 0
+    var closingHour: Int = 17
+    var closingMinute: Int = 0
+    var sessionMinutes: Int = 90
+    var breakMinutes: Int = 0
+    var slotsPerDay: Int = 6
+    var weekdaysOnly: Bool = true
+
+    var sessionLength: TimeInterval { TimeInterval(sessionMinutes * 60) }
+    var openingMinutesFromMidnight: Int { openingHour * 60 + openingMinute }
+    var closingMinutesFromMidnight: Int { closingHour * 60 + closingMinute }
+
+    static let `default` = SchedulingConfiguration()
+}
+
 struct SessionSlot: Identifiable, Hashable {
     let start: Date
+    /// Carried on the slot so a booking keeps its length even if the owner
+    /// changes the default afterwards.
+    let minutes: Int
+
     var id: Date { start }
-    var end: Date { start.addingTimeInterval(SchedulingService.sessionLength) }
+    var end: Date { start.addingTimeInterval(TimeInterval(minutes * 60)) }
+
+    init(start: Date, minutes: Int = SchedulingService.configuration.sessionMinutes) {
+        self.start = start
+        self.minutes = minutes
+    }
 
     var label: String {
         start.formatted(date: .omitted, time: .shortened)
@@ -37,38 +69,73 @@ struct SchedulingReport {
 
 enum SchedulingService {
 
-    /// 90 minutes per session.
-    static let sessionLength: TimeInterval = 90 * 60
-    static let openingHour = 8
-    static let closingHour = 17
-    /// Slots per working day: 08:00, 09:30, 11:00, 12:30, 14:00, 15:30.
-    static let slotsPerDay = 6
-    /// Set false to also book weekends.
-    static var weekdaysOnly = true
+    /// The owner's current preferences. Replaced whenever Settings is saved.
+    nonisolated(unsafe) static var configuration: SchedulingConfiguration = .default
+
+    // MARK: - Convenience readers
+
+    static var sessionLength: TimeInterval { configuration.sessionLength }
+    static var sessionMinutes: Int { configuration.sessionMinutes }
+    static var openingHour: Int { configuration.openingHour }
+    static var closingHour: Int { configuration.closingHour }
+    static var slotsPerDay: Int { configuration.slotsPerDay }
+    static var weekdaysOnly: Bool {
+        get { configuration.weekdaysOnly }
+        set { configuration.weekdaysOnly = newValue }
+    }
+
+    /// "90 minutes", "1 hour", "45 minutes" — for message copy.
+    static var sessionLengthPhrase: String {
+        let minutes = configuration.sessionMinutes
+        if minutes % 60 == 0 {
+            let hours = minutes / 60
+            return hours == 1 ? "1 hour" : "\(hours) hours"
+        }
+        return "\(minutes) minutes"
+    }
 
     // MARK: - Slot generation
+
+    /// The slot start times for one day, before checking who's booked.
+    /// Stops early when the day runs out of room, so an over-ambitious
+    /// `slotsPerDay` can never push a session past closing time.
+    static func slotTimes(on day: Date, configuration config: SchedulingConfiguration = configuration) -> [SessionSlot] {
+        let calendar = Calendar.current
+        guard config.sessionMinutes > 0, config.slotsPerDay > 0 else { return [] }
+
+        var result: [SessionSlot] = []
+        let stride = config.sessionMinutes + max(0, config.breakMinutes)
+
+        for index in 0..<config.slotsPerDay {
+            let offset = index * stride
+            let startMinutes = config.openingMinutesFromMidnight + offset
+            let endMinutes = startMinutes + config.sessionMinutes
+            guard endMinutes <= config.closingMinutesFromMidnight else { break }
+
+            if let start = calendar.date(
+                bySettingHour: startMinutes / 60,
+                minute: startMinutes % 60,
+                second: 0,
+                of: calendar.startOfDay(for: day)
+            ) {
+                result.append(SessionSlot(start: start, minutes: config.sessionMinutes))
+            }
+        }
+        return result
+    }
 
     static func slots(startingFrom day: Date, days: Int) -> [SessionSlot] {
         let calendar = Calendar.current
         var result: [SessionSlot] = []
         var cursor = calendar.startOfDay(for: day)
         var produced = 0
+        // Guard against a settings combination that closes every day.
+        var safety = 0
 
-        while produced < days {
-            let weekday = calendar.component(.weekday, from: cursor)
-            let isWeekend = weekday == 1 || weekday == 7
-            if !(weekdaysOnly && isWeekend) {
-                for index in 0..<slotsPerDay {
-                    let minutesIn = index * Int(sessionLength / 60)
-                    if let start = calendar.date(
-                        bySettingHour: openingHour + minutesIn / 60,
-                        minute: minutesIn % 60,
-                        second: 0,
-                        of: cursor
-                    ), calendar.component(.hour, from: start.addingTimeInterval(sessionLength - 60)) < closingHour {
-                        result.append(SessionSlot(start: start))
-                    }
-                }
+        while produced < days && safety < days * 7 + 14 {
+            safety += 1
+            if !isClosed(on: cursor) {
+                result.append(contentsOf: slotTimes(on: cursor))
                 produced += 1
             }
             guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
@@ -79,7 +146,7 @@ enum SchedulingService {
 
     /// True when the community is shut on that date.
     static func isClosed(on day: Date) -> Bool {
-        guard weekdaysOnly else { return false }
+        guard configuration.weekdaysOnly else { return false }
         let weekday = Calendar.current.component(.weekday, from: day)
         return weekday == 1 || weekday == 7
     }
@@ -99,7 +166,7 @@ enum SchedulingService {
                 .filter { $0.handler?.id == handler.id && $0.id != client?.id }
                 .compactMap(\.scheduledAt)
         )
-        return slots(startingFrom: day, days: 1).filter { !taken.contains($0.start) }
+        return slotTimes(on: day).filter { !taken.contains($0.start) }
     }
 
     // MARK: - Auto scheduling

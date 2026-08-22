@@ -16,8 +16,18 @@ final class ChatService {
     private(set) var isDrafting = false
     private(set) var isReplying = false
 
+    /// How long the typing indicator runs before a demo reply appears. A real
+    /// person doesn't answer the instant you hit send, and without this the
+    /// reply lands before the owner has finished reading their own message.
+    /// Owner-editable in Settings.
+    var replyDelay: ClosedRange<Double> = 3...8
+
     var isModelAvailable: Bool {
         SystemLanguageModel.default.availability == .available
+    }
+
+    func adopt(_ settings: CommunitySettings) {
+        replyDelay = settings.replyDelayRange
     }
 
     // MARK: - Opening draft
@@ -61,7 +71,7 @@ final class ChatService {
                 Person: \(client.name), age \(client.age), in \(client.location).
                 Wellbeing score: \(client.scoreDescription) out of 10.
                 Notes: \(client.notes.isEmpty ? "none" : client.notes)
-                Their session: \(when), 90 minutes, with \(client.handler?.name ?? "one of our handlers").
+                Their session: \(when), \(SchedulingService.sessionLengthPhrase), with \(client.handler?.name ?? "one of our handlers").
                 Write the invitation.
                 """
         }
@@ -84,6 +94,11 @@ final class ChatService {
     func generateReply(for client: Client, history: [ChatMessage]) async -> String {
         isReplying = true
         defer { isReplying = false }
+
+        // Sit on the typing indicator for a few seconds first. Generation
+        // happens after the pause, not during it, so short model responses
+        // don't arrive suspiciously fast.
+        await pauseBeforeReplying()
 
         guard isModelAvailable else { return fallbackReply(for: client) }
 
@@ -120,6 +135,13 @@ final class ChatService {
         }
     }
 
+    /// Waits a random moment inside the owner's configured range.
+    private func pauseBeforeReplying() async {
+        let seconds = Double.random(in: replyDelay)
+        guard seconds > 0 else { return }
+        try? await Task.sleep(for: .seconds(seconds))
+    }
+
     // MARK: - Fallbacks
 
     private func fallbackOpener(for client: Client) -> String {
@@ -135,7 +157,7 @@ final class ChatService {
         let when = client.scheduledAt?.formatted(date: .complete, time: .shortened) ?? "a time we'll confirm shortly"
         return """
             Hi \(client.name), thanks for filling in our form — it takes something to do that. \
-            We've saved you a 90-minute session on \(when) with \(client.handler?.name ?? "one of our handlers"). \
+            We've saved you a \(SchedulingService.sessionMinutes)-minute session on \(when) with \(client.handler?.name ?? "one of our handlers"). \
             Let us know if that time works for you.
             — Mentalzz Community
             """

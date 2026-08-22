@@ -15,6 +15,7 @@ enum SidebarItem: Hashable {
     case upload
     case schedule
     case handlers
+    case settings
     case category(Priority)
 
     var title: String {
@@ -23,6 +24,7 @@ enum SidebarItem: Hashable {
         case .upload: "Upload"
         case .schedule: "Schedule"
         case .handlers: "Handlers"
+        case .settings: "Settings"
         case .category(let priority): priority.rawValue
         }
     }
@@ -33,6 +35,7 @@ enum SidebarItem: Hashable {
         case .upload: "tray.and.arrow.down"
         case .schedule: "calendar"
         case .handlers: "person.2"
+        case .settings: "gearshape"
         case .category(let priority): priority.symbol
         }
     }
@@ -46,6 +49,7 @@ struct RootView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var triage = TriageService()
     @State private var chat = ChatService()
+    @State private var messaging = MessagingService()
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -57,6 +61,14 @@ struct RootView: View {
         }
         .environment(triage)
         .environment(chat)
+        .environment(messaging)
+        .task {
+            // Load the owner's saved settings before anything schedules or sends.
+            let settings = CommunitySettings.current(in: context)
+            settings.apply()
+            chat.adopt(settings)
+            messaging.adopt(settings)
+        }
     }
 
     // MARK: - Sidebar
@@ -68,6 +80,7 @@ struct RootView: View {
                 row(.upload)
                 row(.schedule)
                 row(.handlers)
+                row(.settings)
             }
 
             Section("Categories") {
@@ -118,6 +131,8 @@ struct RootView: View {
             ScheduleView(priority: nil)
         case .handlers:
             HandlersView()
+        case .settings:
+            SettingsView()
         case .category(let priority):
             ScheduleView(priority: priority)
         }
@@ -143,4 +158,16 @@ struct RootView: View {
 #Preview {
     RootView()
         .modelContainer(PreviewData.container)
+}
+
+// MARK: - Preview helpers
+
+extension View {
+    /// The three services every screen expects, wired up for previews.
+    func previewServices() -> some View {
+        self
+            .environment(TriageService())
+            .environment(ChatService())
+            .environment(MessagingService())
+    }
 }
