@@ -375,7 +375,7 @@ struct ClientChatPane: View {
                      ? PhoneNumber.display(client.phone, defaultCountryCode: messaging.defaultCountryCode)
                      : "No usable phone number")
                 .font(.caption2)
-                .foregroundStyle(client.hasUsablePhone ? .secondary : .red)
+                .foregroundStyle(client.hasUsablePhone ? Color.secondary : Color.red)
             }
             Spacer()
             if messaging.channel == .relay {
@@ -677,7 +677,7 @@ struct MessageBubble: View {
                     }
                 }
                 .font(.caption2)
-                .foregroundStyle(message.delivery == .failed ? .red : .secondary)
+                .foregroundStyle(message.delivery == .failed ? Color.red : Color.secondary)
 
                 // A deep link can't tell us whether the owner actually tapped
                 // send in WhatsApp, so they say so here.
