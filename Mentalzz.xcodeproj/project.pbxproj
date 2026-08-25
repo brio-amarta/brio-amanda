@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		870AF4663037469E00E79860 /* Kunang.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kunang.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		870AF4663037469E00E79860 /* Mentalzz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mentalzz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 		870AF4673037469E00E79860 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				870AF4663037469E00E79860 /* Kunang.app */,
+				870AF4663037469E00E79860 /* Mentalzz.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		870AF4653037469E00E79860 /* Kunang */ = {
+		870AF4653037469E00E79860 /* Mentalzz */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 870AF4713037469F00E79860 /* Build configuration list for PBXNativeTarget "Kunang" */;
+			buildConfigurationList = 870AF4713037469F00E79860 /* Build configuration list for PBXNativeTarget "Mentalzz" */;
 			buildPhases = (
 				870AF4623037469E00E79860 /* Sources */,
 				870AF4633037469E00E79860 /* Frameworks */,
@@ -63,11 +63,11 @@
 			fileSystemSynchronizedGroups = (
 				870AF4683037469E00E79860 /* Kunang */,
 			);
-			name = Kunang;
+			name = Mentalzz;
 			packageProductDependencies = (
 			);
-			productName = Kunang;
-			productReference = 870AF4663037469E00E79860 /* Kunang.app */;
+			productName = Mentalzz;
+			productReference = 870AF4663037469E00E79860 /* Mentalzz.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 870AF4613037469E00E79860 /* Build configuration list for PBXProject "Kunang" */;
+			buildConfigurationList = 870AF4613037469E00E79860 /* Build configuration list for PBXProject "Mentalzz" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				870AF4653037469E00E79860 /* Kunang */,
+				870AF4653037469E00E79860 /* Mentalzz */,
 			);
 		};
 /* End PBXProject section */
@@ -317,7 +317,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		870AF4613037469E00E79860 /* Build configuration list for PBXProject "Kunang" */ = {
+		870AF4613037469E00E79860 /* Build configuration list for PBXProject "Mentalzz" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				870AF46F3037469F00E79860 /* Debug */,
@@ -326,7 +326,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		870AF4713037469F00E79860 /* Build configuration list for PBXNativeTarget "Kunang" */ = {
+		870AF4713037469F00E79860 /* Build configuration list for PBXNativeTarget "Mentalzz" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				870AF4723037469F00E79860 /* Debug */,

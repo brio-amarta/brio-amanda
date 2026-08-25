@@ -1,12 +1,18 @@
 # Kunang
 
-An iPad/iPhone app for running a community mental health group in Bali. The owner drops in a spreadsheet, the on-device model triages everyone, and the app builds a clash-free session schedule.
+An iPad/iPhone app for running a community mental health group in Bali.
+
+> **Naming.** The app is **Kunang** everywhere a person sees it — Home Screen,
+> sidebar, App Store. The Xcode project, target and scheme are still named
+> `Mentalzz`, deliberately: Xcode Cloud workflows reference those by name, and
+> renaming them breaks the build pipeline. `CFBundleDisplayName` carries the
+> real name instead. The owner drops in a spreadsheet, the on-device model triages everyone, and the app builds a clash-free session schedule.
 
 Built with SwiftUI, SwiftData and Apple's **Foundation Models** framework. Everything runs on device — no client data leaves the iPad.
 
 ## Getting started
 
-1. Open `Kunang.xcodeproj` and run on an iPad (or iPad simulator).
+1. Open `Mentalzz.xcodeproj` and run on an iPad (or iPad simulator).
 2. Go to **Handlers** and add the people who run sessions. Nothing schedules until there's at least one.
 3. Go to **Upload**, pick `SampleData/sample-clients.csv`, and tap *Triage & build schedule*.
 
