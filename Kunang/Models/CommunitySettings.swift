@@ -48,10 +48,19 @@ final class CommunitySettings {
     /// The Meta access token lives there, never in this app.
     var relayBaseURL: String = ""
 
-    /// The community's WhatsApp Business number. Anyone who messages this
-    /// number turns up in the app: known senders land in their own chat,
-    /// unknown ones arrive as a new intake.
-    var communityWhatsAppNumber: String = "6282338514166"
+    /// The number registered on the Cloud API, in digits-only E.164.
+    static let defaultCommunityNumber = "6287864894065"
+
+    /// Numbers that shipped as the default in an earlier build and are no
+    /// longer reachable. Anyone upgrading still has one of these saved, so
+    /// they get swapped for the current number on launch.
+    static let retiredCommunityNumbers = ["6282338514166"]
+
+    /// The community's WhatsApp Business number — the one registered on the
+    /// Cloud API, not a personal number. Anyone who messages it turns up in
+    /// the app: known senders land in their own chat, unknown ones arrive as
+    /// a new intake.
+    var communityWhatsAppNumber: String = CommunitySettings.defaultCommunityNumber
 
     /// Watermark for inbox polling, so the same message is never imported twice.
     var lastInboxSyncAt: Date?
@@ -66,12 +75,23 @@ final class CommunitySettings {
     static func current(in context: ModelContext) -> CommunitySettings {
         let descriptor = FetchDescriptor<CommunitySettings>()
         if let existing = try? context.fetch(descriptor).first {
+            existing.retireDeadCommunityNumber(in: context)
             return existing
         }
         let fresh = CommunitySettings()
         context.insert(fresh)
         try? context.save()
         return fresh
+    }
+
+    /// Swaps a number that used to be the default for the current one. Without
+    /// this, upgrading leaves the old value in place and inbound silently
+    /// points at a number nobody can reach.
+    private func retireDeadCommunityNumber(in context: ModelContext) {
+        let digits = communityWhatsAppNumber.filter(\.isNumber)
+        guard Self.retiredCommunityNumbers.contains(digits) else { return }
+        communityWhatsAppNumber = Self.defaultCommunityNumber
+        try? context.save()
     }
 
     // MARK: - Derived

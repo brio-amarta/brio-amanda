@@ -169,7 +169,7 @@ final class MessagingService {
     var defaultCountryCode: String = "62"
     var relayBaseURL: String = ""
     /// The community's own WhatsApp Business number — the one clients message.
-    var communityNumber: String = "6282338514166"
+    var communityNumber: String = "6287864894065"
 
     private(set) var isSyncingInbox = false
     /// Set after a sync so the UI can say when it last heard from the relay.

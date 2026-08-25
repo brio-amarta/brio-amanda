@@ -1,5 +1,8 @@
 # Kunang relay
 
+**Deployed at `https://kunang-relay.kunangworkspace.workers.dev`**
+(D1 database `kunang-relay`, id `c0f0afe0-c97c-49dc-af8e-4a253a86072f`, region APAC.)
+
 The server side of Live messaging. Holds the WhatsApp Cloud API token,
 receives Meta's webhooks, auto-replies, and serves the two endpoints
 `../RELAY.md` specifies.
@@ -87,8 +90,18 @@ Nothing arrives until you tick that box.
 
 ## Point Kunang at it
 
-On the iPad: **Settings → Messaging** → channel **Relay server** → address
-`https://kunang-relay.<you>.workers.dev`
+On the iPad: **Settings → Messaging** → **Relay server** address
+`https://kunang-relay.<you>.workers.dev` — no trailing slash, no `/inbox` on
+the end. Kunang appends the paths itself.
+
+The **Live channel** picker is separate and controls *sending* only. Receiving
+needs nothing but the address, so you can leave the channel on **WhatsApp**
+(deep links, you confirm each send in WhatsApp) and still get replies back in
+the app. Set the channel to **Relay server** when you want Kunang to send
+through the Cloud API without opening WhatsApp.
+
+Once the address is in, Settings → Messaging grows an **Inbox** line showing
+when it last checked, and a **Check for new messages now** button.
 
 ## Test it
 
@@ -97,7 +110,10 @@ On the iPad: **Settings → Messaging** → channel **Relay server** → address
 2. `curl https://kunang-relay.<you>.workers.dev/inbox` shows both messages.
 3. In Kunang, open a client whose phone number is yours, switch to **Live**,
    send something. It arrives on your phone and comes back marked *Delivered*.
-4. Reply from your phone, then tap ↻ in that thread. Your reply appears.
+4. Reply from your phone. Within a few seconds it appears in that thread on its
+   own — ↻ only forces it sooner.
+5. Message the number from a phone that is **not** on any client record. A new
+   client appears under **Others** with the message in their Live tab.
 
 Run the offline tests any time — no Meta account or network needed:
 
@@ -107,16 +123,21 @@ npm test
 
 ## Two things to expect
 
-**Inbound only appears when you tap ↻.** `MessagingService.fetchInbound` polls
-on demand, not on a timer, and there is no push. The relay has the message the
-instant it arrives; Kunang shows it when asked. Making it appear on its own
-needs an app-side change.
+**Inbound arrives on its own.** Kunang polls `GET /inbox` every 10 seconds in
+the background, and every 5 seconds while a Live thread is open — plus once
+immediately when you open one. The ↻ button in the Live banner forces a check.
+There is still no push, so a message can take a few seconds; it will not sit
+there until you ask for it.
 
-**Unknown senders are invisible in the app.** Kunang pulls by `clientRef` — a
-client's UUID. The relay only learns which phone belongs to which client when
-the app first sends to that number, and it backfills earlier messages at that
-moment. Someone who messages the number without being in your client list is
-stored correctly and shows in `/inbox`, but has no thread to appear in.
+**Unknown senders become new clients.** Kunang matches each inbound message by
+`clientRef` first, then by phone number against your client list. A sender
+nobody recognises is created as a new client in **Others**, untriaged and
+unbooked, named from their WhatsApp profile. Nothing is dropped for not being
+in the spreadsheet.
+
+Because `/inbox` returns both directions, Kunang skips rows whose `direction`
+is outbound — otherwise your own sent messages would come back into the thread
+attributed to the client.
 
 ## The automated reply
 

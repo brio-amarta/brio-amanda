@@ -206,8 +206,19 @@ struct SettingsView: View {
             }
 
             LabeledContent("Community WhatsApp number") {
-                TextField("6282338514166", text: binding(settings, \.communityWhatsAppNumber))
+                TextField("6287864894065", text: binding(settings, \.communityWhatsAppNumber))
                     .keyboardType(.phonePad)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            // Always visible. Receiving depends on this address and not on the
+            // channel above, so hiding it behind "Relay server" left no way to
+            // switch inbound on while still sending through WhatsApp.
+            LabeledContent("Relay address") {
+                TextField("https://…", text: binding(settings, \.relayBaseURL))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
                     .multilineTextAlignment(.trailing)
             }
 
@@ -241,18 +252,15 @@ struct SettingsView: View {
                 }
             }
 
-            if settings.messagingChannel == .relay {
-                LabeledContent("Relay address") {
-                    TextField("https://…", text: binding(settings, \.relayBaseURL))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .multilineTextAlignment(.trailing)
-                }
-                if !messaging.isRelayConfigured {
-                    Label("No relay set — Live sending is off.", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                        .font(.footnote)
-                }
+            if !messaging.isRelayConfigured {
+                Label(
+                    settings.messagingChannel == .relay
+                        ? "No relay address — sending and receiving are both off."
+                        : "No relay address — replies won't reach the app.",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .foregroundStyle(.orange)
+                .font(.footnote)
             }
 
             if settings.messagingChannel == .iMessage && !SystemMessageComposer.canSend {
