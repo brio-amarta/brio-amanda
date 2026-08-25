@@ -5,20 +5,18 @@
 //  Live messaging. Unlike the demo chat, nothing here invents a reply — a
 //  message either really leaves the iPad or it doesn't.
 //
-//  Three channels:
+//  Two channels:
 //
 //  • .whatsApp  — opens WhatsApp on a wa.me link with the text pre-filled.
 //                 The owner taps send inside WhatsApp. No token, no server.
-//  • .iMessage  — the system message sheet (MFMessageComposeViewController),
-//                 which reports back whether it was actually sent.
 //  • .relay     — POSTs to a server the owner hosts, which holds the Meta
 //                 Cloud API token and does the real send. Off until they set
 //                 a URL in Settings.
 //
-//  Apple gives no public API for sending iMessage or WhatsApp silently, and
+//  Apple gives no public API for sending WhatsApp messages silently, and
 //  Meta's terms forbid shipping a Cloud API access token inside a mobile app.
-//  Every channel here is therefore either owner-confirmed or server-brokered
-//  on purpose, not as a shortcut.
+//  Both channels are therefore either owner-confirmed or server-brokered on
+//  purpose, not as a shortcut.
 //
 
 import Foundation
@@ -29,7 +27,6 @@ import UIKit
 
 enum MessagingChannel: String, CaseIterable, Identifiable, Codable {
     case whatsApp = "WhatsApp"
-    case iMessage = "iMessage"
     case relay = "Relay server"
 
     var id: String { rawValue }
@@ -37,7 +34,6 @@ enum MessagingChannel: String, CaseIterable, Identifiable, Codable {
     var symbol: String {
         switch self {
         case .whatsApp: "bubble.left.and.text.bubble.right"
-        case .iMessage: "message"
         case .relay: "antenna.radiowaves.left.and.right"
         }
     }
@@ -49,8 +45,6 @@ enum MessagingChannel: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .whatsApp:
             "Opens WhatsApp with the message ready. You tap send there, then log their reply back here."
-        case .iMessage:
-            "Opens the system message sheet. You tap send; iOS tells Kunang whether it went."
         case .relay:
             "Sends through a server you host, which holds the WhatsApp Cloud API token. Two-way, but only once the relay is running."
         }
@@ -210,9 +204,6 @@ final class MessagingService {
     }
 
     /// Sends `text` to `client` over the current channel.
-    ///
-    /// `.iMessage` is not handled here — it needs a view controller, so the
-    /// chat presents `SystemMessageComposer` instead and reports the result.
     func send(_ text: String, to client: Client) async -> SendOutcome {
         isSending = true
         defer { isSending = false }
@@ -228,9 +219,6 @@ final class MessagingService {
         switch channel {
         case .whatsApp:
             return await openWhatsApp(number: number, text: text)
-        case .iMessage:
-            // The caller presents the sheet; reaching here means it couldn't.
-            return fail(.channelUnavailable(.iMessage))
         case .relay:
             return await sendViaRelay(number: number, text: text, client: client)
         }

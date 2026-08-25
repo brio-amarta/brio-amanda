@@ -16,6 +16,8 @@ enum SidebarItem: Hashable {
     case schedule
     case handlers
     case settings
+    /// Every client, whatever their category.
+    case allClients
     case category(Priority)
 
     var title: String {
@@ -25,6 +27,7 @@ enum SidebarItem: Hashable {
         case .schedule: "Schedule"
         case .handlers: "Handlers"
         case .settings: "Settings"
+        case .allClients: "All Clients"
         case .category(let priority): priority.rawValue
         }
     }
@@ -36,6 +39,7 @@ enum SidebarItem: Hashable {
         case .schedule: "calendar.day.timeline.left"
         case .handlers: "person.2"
         case .settings: "gearshape"
+        case .allClients: "person.3"
         case .category(let priority): priority.symbol
         }
     }
@@ -106,6 +110,21 @@ struct RootView: View {
             }
 
             Section("Categories") {
+                // Everyone, before the five buckets they get split into.
+                NavigationLink(value: SidebarItem.allClients) {
+                    Label {
+                        HStack {
+                            Text("All Clients")
+                            Spacer()
+                            Text("\(clients.count)")
+                                .foregroundStyle(.secondary)
+                                .font(.footnote)
+                        }
+                    } icon: {
+                        Image(systemName: "person.3")
+                    }
+                }
+
                 ForEach(Priority.allCases) { priority in
                     NavigationLink(value: SidebarItem.category(priority)) {
                         Label {
@@ -155,6 +174,8 @@ struct RootView: View {
             HandlersView()
         case .settings:
             SettingsView()
+        case .allClients:
+            ScheduleView(priority: nil)
         case .category(let priority):
             ScheduleView(priority: priority)
         }

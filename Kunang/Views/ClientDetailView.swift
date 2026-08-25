@@ -10,7 +10,6 @@ import SwiftUI
 import SwiftData
 import Foundation
 import UIKit
-import MessageUI
 
 struct ClientDetailView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -335,8 +334,6 @@ struct ClientChatPane: View {
     @State private var hasPrefilled = false
 
     // Live mode
-    @State private var showSystemComposer = false
-    @State private var pendingLiveMessage: ChatMessage?
     @State private var showLogReply = false
     @State private var loggedReply = ""
     @State private var errorMessage: String?
@@ -420,15 +417,6 @@ struct ClientChatPane: View {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
                 await syncInbox()
-            }
-        }
-        .sheet(isPresented: $showSystemComposer) {
-            if let number = PhoneNumber.e164(client.phone, defaultCountryCode: messaging.defaultCountryCode),
-               let pending = pendingLiveMessage {
-                SystemMessageComposer(recipient: "+" + number, body: pending.text) { result in
-                    finishSystemCompose(result, for: pending)
-                }
-                .ignoresSafeArea()
             }
         }
         .alert("What did they say?", isPresented: $showLogReply) {
@@ -667,42 +655,12 @@ struct ClientChatPane: View {
         draft = ""
         try? context.save()
 
-        if messaging.channel == .iMessage {
-            guard SystemMessageComposer.canSend else {
-                outgoing.delivery = .failed
-                errorMessage = MessagingError.channelUnavailable(.iMessage).localizedDescription
-                try? context.save()
-                return
-            }
-            pendingLiveMessage = outgoing
-            showSystemComposer = true
-            return
-        }
-
         let outcome = await messaging.send(text, to: client)
         outgoing.delivery = outcome.delivery
         if case .failed(let error) = outcome {
             errorMessage = error.localizedDescription
         } else {
             markContacted()
-        }
-        try? context.save()
-    }
-
-    private func finishSystemCompose(_ result: MessageComposeResult, for message: ChatMessage) {
-        showSystemComposer = false
-        pendingLiveMessage = nil
-        switch result {
-        case .sent:
-            message.delivery = .sent
-            markContacted()
-        case .cancelled:
-            message.delivery = .pending
-        case .failed:
-            message.delivery = .failed
-            errorMessage = "iOS couldn't send that message."
-        @unknown default:
-            message.delivery = .pending
         }
         try? context.save()
     }

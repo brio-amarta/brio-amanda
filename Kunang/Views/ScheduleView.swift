@@ -20,15 +20,22 @@ struct ScheduleView: View {
     @State private var search = ""
     @State private var selectedClient: Client?
 
+    /// "All Clients" when no priority is set, otherwise the category name.
+    private var title: String {
+        priority?.rawValue ?? "All Clients"
+    }
+
     var body: some View {
         Group {
             if visibleClients.isEmpty {
                 ContentUnavailableView {
-                    Label(priority?.rawValue ?? "Nothing scheduled", systemImage: priority?.symbol ?? "calendar")
+                    Label(title, systemImage: priority?.symbol ?? "person.3")
                 } description: {
                     Text(clients.isEmpty
                          ? "Upload a spreadsheet to get started."
-                         : "Nobody is in this category right now.")
+                         : priority == nil
+                           ? "No clients match that search."
+                           : "Nobody is in this category right now.")
                 }
             } else if sizeClass == .compact {
                 compactList
@@ -36,13 +43,21 @@ struct ScheduleView: View {
                 table
             }
         }
-        .navigationTitle(priority?.rawValue ?? "Schedule")
-        // .inline centres the title in whatever space the toolbar leaves, so
-        // "Crisis" and "Others" drifted while longer names sat left. Large
-        // pins every category title to the same top-left position.
-        .navigationBarTitleDisplayMode(.large)
+        // The title is a leading toolbar item rather than a navigation title.
+        // .inline centres it in whatever space the toolbar leaves, so short
+        // names like "Crisis" drifted while longer ones sat left; .large put
+        // it on its own row below the search field. As a toolbar item it sits
+        // on the same line as the counter, menu and search, in the same place
+        // for every category.
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Search name or location")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Text(title)
+                    .font(.title2.bold())
+                    .lineLimit(1)
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 fractionBadge
             }

@@ -41,8 +41,10 @@ Crisis, High Priority and Moderate get booked. Referral Required and Others get 
 | Channel | What happens | Needs |
 |---|---|---|
 | WhatsApp | Opens WhatsApp on a `wa.me` link with the text filled in; you tap send there | Nothing |
-| iMessage | Opens the system message sheet; iOS reports back whether it sent | A device that can send texts |
-| Relay server | POSTs to a server you host, which does the real Cloud API send | Your own relay — see `RELAY.md` |
+| Relay server | Sends through a server you host, silently, via the Cloud API | Your own relay — see `RELAY.md` |
+
+On iPad, Relay server is the one that matters: WhatsApp Business doesn't exist
+there, so the deep link has nowhere good to land.
 
 Live bubbles are green and carry a delivery state. WhatsApp can't tell us whether you actually tapped send, so those messages show *Mark as sent* until you confirm. Replies arrive in WhatsApp, not here — the ✎ button logs what they said so the thread on the iPad matches the real one. With a relay, ↻ pulls new inbound messages instead.
 
@@ -82,7 +84,8 @@ Kunang/
 │   ├── TriageService.swift    @Generable triage + fallback rules
 │   ├── SchedulingService.swift Slot generation and assignment
 │   ├── ChatService.swift      Draft openers and client replies
-│   └── MessagingService.swift Real sending: wa.me, iMessage, relay
+│   ├── MessagingService.swift Real sending: wa.me deep link or relay
+│   └── InboxSync.swift        Files inbound messages against clients
 └── Views/
     ├── OverviewView.swift     Home stats + category cards
     ├── UploadView.swift       Spreadsheet import
@@ -90,7 +93,6 @@ Kunang/
     ├── ScheduleView.swift     Sortable Table / compact list, per category
     ├── HandlersView.swift     Leaderboard, stats, edit
     ├── SettingsView.swift     Hours, sessions, messaging, delays
-    ├── SystemMessageComposer.swift MFMessageComposeViewController wrapper
     └── ClientDetailView.swift Profile + demo/live chat
 ```
 

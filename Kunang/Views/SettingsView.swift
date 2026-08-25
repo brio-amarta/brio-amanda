@@ -281,11 +281,6 @@ struct SettingsView: View {
                 }
             }
 
-            if settings.messagingChannel == .iMessage && !SystemMessageComposer.canSend {
-                Label("This device can't send text messages.", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                    .font(.footnote)
-            }
         } header: {
             Text("Messaging")
         } footer: {
