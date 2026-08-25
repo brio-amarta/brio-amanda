@@ -1,0 +1,17 @@
+{
+  "name": "kunang-relay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WhatsApp Cloud API relay for Kunang. Implements the contract in ../RELAY.md.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 execute kunang-relay --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute kunang-relay --remote --file=./schema.sql",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

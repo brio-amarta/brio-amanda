@@ -1,0 +1,22 @@
+name = "kunang-relay"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Storage for contacts, messages and flow state.
+# Create it once with:  npx wrangler d1 create kunang-relay
+# then paste the returned database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "kunang-relay"
+database_id = "PASTE_DATABASE_ID_HERE"
+
+[vars]
+# Non-secret config. Secrets go in .dev.vars (local) or `wrangler secret put` (deployed).
+GRAPH_API_VERSION = "v21.0"
+
+# Secrets — never put these here:
+#   WHATSAPP_TOKEN      Cloud API access token
+#   PHONE_NUMBER_ID     the sending number's ID
+#   VERIFY_TOKEN        any string you invent, must match the Meta dashboard
+#   APP_SECRET          Meta app secret, used to verify X-Hub-Signature-256
+#   APP_SHARED_SECRET   optional; if set, Kunang must send X-Relay-Secret
