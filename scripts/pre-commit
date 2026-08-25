@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# Blocks commits that change the app's signing identity.
+#
+# Xcode rewrites project.pbxproj whenever it "fixes" signing — switching the
+# team when you're logged into a second Apple account, or appending a digit to
+# the bundle ID when it can't claim the original. Both changes are silent, both
+# look like noise in a large pbxproj diff, and both break Xcode Cloud's export
+# step because the workflow is bound to one app record.
+#
+# That is exactly what happened in commit 2ea9ebd ("UI fix").
+#
+# Install once:
+#     git config core.hooksPath scripts
+#
+# To make one of these changes deliberately:
+#     git commit --no-verify
+
+EXPECTED_TEAM="P92NAYLB48"
+EXPECTED_BUNDLE_ID="com.brioamarta.amanda"
+PBXPROJ="Mentalzz.xcodeproj/project.pbxproj"
+
+# Nothing to check if the project file isn't part of this commit.
+git diff --cached --name-only | grep -q "^$PBXPROJ$" || exit 0
+
+staged=$(git show ":$PBXPROJ" 2>/dev/null) || exit 0
+
+bad_team=$(printf '%s\n' "$staged" | grep -o 'DEVELOPMENT_TEAM = [A-Z0-9]*;' | grep -v "$EXPECTED_TEAM")
+bad_id=$(printf '%s\n' "$staged" | grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [A-Za-z0-9._]*;' | grep -v "= $EXPECTED_BUNDLE_ID;")
+
+if [ -n "$bad_team" ] || [ -n "$bad_id" ]; then
+    echo ""
+    echo "  ✋ Commit blocked: the app's signing identity changed."
+    echo ""
+    [ -n "$bad_team" ] && echo "     Expected team      $EXPECTED_TEAM, found: $bad_team"
+    [ -n "$bad_id" ]   && echo "     Expected bundle ID $EXPECTED_BUNDLE_ID, found: $bad_id"
+    echo ""
+    echo "     Xcode probably rewrote this on its own. Undo with:"
+    echo "         git checkout -- $PBXPROJ"
+    echo ""
+    echo "     If the change is deliberate, update the values at the top of"
+    echo "     scripts/pre-commit, or bypass once with: git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+exit 0

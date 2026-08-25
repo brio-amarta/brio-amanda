@@ -26,3 +26,13 @@ Package.resolved
 # CocoaPods / Carthage (unused, kept for safety)
 Pods/
 Carthage/Build/
+
+# Relay — secrets and build artefacts. .dev.vars holds the Cloud API token.
+relay/node_modules/
+relay/.wrangler/
+relay/.dev.vars
+**/.dev.vars
+
+# Note: Mentalzz.xcodeproj/project.pbxproj is deliberately NOT ignored — the
+# build needs it. Xcode rewriting the signing identity in it is guarded by
+# scripts/pre-commit instead. Enable with: git config core.hooksPath scripts
