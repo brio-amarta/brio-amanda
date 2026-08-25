@@ -37,7 +37,10 @@ struct ScheduleView: View {
             }
         }
         .navigationTitle(priority?.rawValue ?? "Schedule")
-        .navigationBarTitleDisplayMode(.inline)
+        // .inline centres the title in whatever space the toolbar leaves, so
+        // "Crisis" and "Others" drifted while longer names sat left. Large
+        // pins every category title to the same top-left position.
+        .navigationBarTitleDisplayMode(.large)
         .searchable(text: $search, prompt: "Search name or location")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -72,20 +75,24 @@ struct ScheduleView: View {
 
     private var table: some View {
         GeometryReader { geometry in
-            // iPadOS 26 floats the sidebar over the detail column, so the
-            // first column would sit underneath it. Clear the reported safe
-            // area, plus a little breathing room.
-            let leading = max(geometry.safeAreaInsets.leading, 0) + 12
-            let usable = max(0, geometry.size.width - leading)
+            // GeometryReader here is already positioned inside the safe area,
+            // so its origin sits past the floating sidebar. Adding
+            // safeAreaInsets.leading on top of that shifted the table a second
+            // full sidebar-width to the right — the big gap. A plain gutter is
+            // all that's needed.
+            let usable = max(0, geometry.size.width - Self.gutter)
 
             ScrollView(.horizontal) {
                 tableCore
                     .frame(width: max(usable, Self.minimumTableWidth))
-                    .padding(.leading, leading)
+                    .padding(.leading, Self.gutter)
             }
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
     }
+
+    /// Breathing room between the sidebar edge and the first column.
+    private static let gutter: CGFloat = 16
 
     private var tableCore: some View {
         Table(visibleClients, sortOrder: $sortOrder) {

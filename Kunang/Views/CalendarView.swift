@@ -48,19 +48,10 @@ struct CalendarView: View {
         }
         .navigationTitle("Schedule")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            // One control only — a second glass capsule beside this one
-            // crowds it on iPadOS 26.
-            ToolbarItem(placement: .topBarTrailing) {
-                Picker("View", selection: $scope) {
-                    ForEach(CalendarScope.allCases) { option in
-                        Text(option.rawValue).tag(option)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 150)
-            }
-        }
+        // The Day/Week picker deliberately lives in the header rather than the
+        // toolbar: on iPadOS 26 a toolbar item draws its own Liquid Glass
+        // capsule, which wrapped the segmented control's capsule and produced
+        // a visible double-layered bubble.
         .navigationDestination(item: $selectedClient) { client in
             ClientDetailView(client: client)
         }
@@ -93,6 +84,15 @@ struct CalendarView: View {
                     .buttonStyle(.bordered)
                     .controlSize(.small)
             }
+
+            Picker("View", selection: $scope) {
+                ForEach(CalendarScope.allCases) { option in
+                    Text(option.rawValue).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 150)
 
             Button {
                 step(by: 1)

@@ -44,6 +44,10 @@ enum InboxSync {
         context: ModelContext
     ) async -> Result {
         guard messaging.isRelayConfigured else { return Result() }
+        // An open Live thread polls every 5s while the background loop runs
+        // every 10s. Without this the two interleave and race on the
+        // watermark. Skipping is safe — the other run is already fetching.
+        guard !messaging.isSyncingInbox else { return Result() }
 
         messaging.beginInboxSync()
         defer { messaging.finishInboxSync(at: .now) }

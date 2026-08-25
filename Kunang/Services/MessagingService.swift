@@ -332,15 +332,27 @@ final class MessagingService {
 
             let formatter = ISO8601DateFormatter()
             return rows.compactMap { row in
-                guard let from = row["from"] as? String,
-                      let text = row["text"] as? String
-                else { return nil }
+                // The relay names the sender "phone" and the display name
+                // "name"; the documented contract calls them "from" and
+                // "profileName". Accept either so a relay change isn't
+                // needed and neither side can silently stop matching.
+                let sender = (row["from"] as? String) ?? (row["phone"] as? String)
+                guard let sender, let text = row["text"] as? String else { return nil }
+
+                // /inbox returns both directions. Anything we sent is already
+                // in the thread — importing it would duplicate the message and
+                // attribute it to the client.
+                if let direction = row["direction"] as? String,
+                   direction.lowercased().hasPrefix("out") {
+                    return nil
+                }
+
                 return InboundMessage(
-                    from: from,
+                    from: sender,
                     text: text,
                     timestamp: (row["timestamp"] as? String).flatMap(formatter.date(from:)) ?? .now,
                     clientRef: (row["clientRef"] as? String).flatMap(UUID.init(uuidString:)),
-                    profileName: row["profileName"] as? String
+                    profileName: (row["profileName"] as? String) ?? (row["name"] as? String)
                 )
             }
         } catch {

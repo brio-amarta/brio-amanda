@@ -77,7 +77,7 @@ struct RootView: View {
             // so a message shows up here without the owner going looking.
             while !Task.isCancelled {
                 await InboxSync.run(messaging: messaging, settings: settings, context: context)
-                try? await Task.sleep(for: .seconds(30))
+                try? await Task.sleep(for: .seconds(10))
             }
         }
     }

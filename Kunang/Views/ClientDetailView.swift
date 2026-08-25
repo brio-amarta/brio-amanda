@@ -340,7 +340,6 @@ struct ClientChatPane: View {
     @State private var showLogReply = false
     @State private var loggedReply = ""
     @State private var errorMessage: String?
-    @State private var isPolling = false
 
     private var visibleMessages: [ChatMessage] {
         mode == .demo ? client.demoMessages : client.liveMessages
@@ -410,6 +409,16 @@ struct ClientChatPane: View {
             hasPrefilled = true
             draft = await chat.draftOpener(for: client)
         }
+        // Opening a Live thread checks straight away, then keeps checking
+        // while it's on screen, so a reply lands in seconds rather than
+        // waiting on the slower background poll.
+        .task(id: mode) {
+            guard mode == .live, messaging.isRelayConfigured else { return }
+            while !Task.isCancelled {
+                await syncInbox()
+                try? await Task.sleep(for: .seconds(5))
+            }
+        }
         .sheet(isPresented: $showSystemComposer) {
             if let number = PhoneNumber.e164(client.phone, defaultCountryCode: messaging.defaultCountryCode),
                let pending = pendingLiveMessage {
@@ -450,29 +459,46 @@ struct ClientChatPane: View {
     /// Live mode is the one that can actually reach a person, so it says
     /// exactly where the message is about to go before anything is sent.
     private var liveBanner: some View {
-        HStack(spacing: 8) {
-            Image(systemName: messaging.channel.symbol)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Sends via \(messaging.channel.rawValue)")
-                    .font(.caption.weight(.semibold))
-                Text(client.hasUsablePhone
-                     ? PhoneNumber.display(client.phone, defaultCountryCode: messaging.defaultCountryCode)
-                     : "No usable phone number")
-                .font(.caption2)
-                .foregroundStyle(client.hasUsablePhone ? Color.secondary : Color.red)
-            }
-            Spacer()
-            if messaging.channel == .relay {
-                Button {
-                    Task { await pollRelay() }
-                } label: {
-                    if isPolling {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                    }
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: messaging.channel.symbol)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Sends via \(messaging.channel.rawValue)")
+                        .font(.caption.weight(.semibold))
+                    Text(client.hasUsablePhone
+                         ? PhoneNumber.display(client.phone, defaultCountryCode: messaging.defaultCountryCode)
+                         : "No usable phone number")
+                    .font(.caption2)
+                    .foregroundStyle(client.hasUsablePhone ? Color.secondary : Color.red)
                 }
-                .disabled(!messaging.isRelayConfigured || isPolling)
+                Spacer()
+
+                // Receiving depends on the relay, not on the send channel, so
+                // this is offered whenever a relay address exists.
+                if messaging.isRelayConfigured {
+                    Button {
+                        Task { await syncInbox() }
+                    } label: {
+                        if messaging.isSyncingInbox {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .disabled(messaging.isSyncingInbox)
+                }
+            }
+
+            // Without this the chat just sits empty and there's nothing on
+            // screen explaining why nothing ever arrives.
+            if !messaging.isRelayConfigured {
+                Label(
+                    "Receiving is off — add a relay address in Settings → Messaging to see replies here.",
+                    systemImage: "antenna.radiowaves.left.and.right.slash"
+                )
+                .font(.caption2)
+                .foregroundStyle(.orange)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.horizontal, 14)
@@ -706,30 +732,11 @@ struct ClientChatPane: View {
         try? context.save()
     }
 
-    private func pollRelay() async {
-        isPolling = true
-        defer { isPolling = false }
-
-        let since = client.lastLiveInboundAt ?? Date.now.addingTimeInterval(-7 * 24 * 3600)
-        let inbound = await messaging.fetchInbound(for: client, since: since)
-        guard !inbound.isEmpty else { return }
-
-        for item in inbound {
-            let message = ChatMessage(
-                text: item.text,
-                isFromOwner: false,
-                isLive: true,
-                channel: .relay,
-                delivery: .delivered,
-                timestamp: item.timestamp
-            )
-            message.client = client
-            context.insert(message)
-        }
-        if client.status == .noResponse || client.status == .newIntake {
-            client.status = .inProgress
-        }
-        try? context.save()
+    /// Pulls the whole inbox rather than just this client's thread, so a reply
+    /// from someone else isn't stranded until the background poll comes round.
+    private func syncInbox() async {
+        let settings = CommunitySettings.current(in: context)
+        await InboxSync.run(messaging: messaging, settings: settings, context: context)
     }
 
     /// A real message going out means this person is no longer untouched.
