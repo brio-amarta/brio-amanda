@@ -72,6 +72,13 @@ struct RootView: View {
             settings.apply()
             chat.adopt(settings)
             messaging.adopt(settings)
+
+            // Keep pulling whatever arrives at the community's WhatsApp number
+            // so a message shows up here without the owner going looking.
+            while !Task.isCancelled {
+                await InboxSync.run(messaging: messaging, settings: settings, context: context)
+                try? await Task.sleep(for: .seconds(30))
+            }
         }
     }
 

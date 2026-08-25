@@ -48,6 +48,14 @@ final class CommunitySettings {
     /// The Meta access token lives there, never in this app.
     var relayBaseURL: String = ""
 
+    /// The community's WhatsApp Business number. Anyone who messages this
+    /// number turns up in the app: known senders land in their own chat,
+    /// unknown ones arrive as a new intake.
+    var communityWhatsAppNumber: String = "6282338514166"
+
+    /// Watermark for inbox polling, so the same message is never imported twice.
+    var lastInboxSyncAt: Date?
+
     var updatedAt: Date = Date()
 
     init() {}

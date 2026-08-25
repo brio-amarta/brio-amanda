@@ -388,10 +388,16 @@ struct ClientChatPane: View {
                     }
                     .padding(.bottom, 8)
                 }
+                // Pin to the bottom so a growing composer never buries the
+                // message the owner just sent.
+                .defaultScrollAnchor(.bottom)
                 .onChange(of: visibleMessages.count) { _, _ in
                     withAnimation {
                         proxy.scrollTo(visibleMessages.last?.persistentModelID, anchor: .bottom)
                     }
+                }
+                .onChange(of: draft) { _, _ in
+                    proxy.scrollTo(visibleMessages.last?.persistentModelID, anchor: .bottom)
                 }
             }
 
@@ -509,12 +515,19 @@ struct ClientChatPane: View {
             // WhatsApp proportions: a slim capsule that hugs the text, with
             // the action buttons sitting outside it rather than inflating it.
             HStack(alignment: .bottom, spacing: 8) {
+                // A capsule's corner radius is half its height, so once the
+                // field wraps to several lines the curve cuts into the first
+                // and last line of text. A fixed 18pt radius still reads as a
+                // pill on one line and stays correct as it grows.
                 TextField(mode == .demo ? "Message" : "Message (sends for real)", text: $draft, axis: .vertical)
                     .font(.callout)
                     .lineLimit(1...6)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(.secondarySystemBackground), in: .capsule)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        Color(.secondarySystemBackground),
+                        in: .rect(cornerRadius: 18, style: .continuous)
+                    )
 
                 if mode == .live {
                     Button {

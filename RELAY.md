@@ -34,6 +34,37 @@ Any 2xx means accepted. The app marks the message **Delivered**. Non-2xx bodies
 are shown to the owner verbatim (first 200 characters), so put something useful
 there.
 
+### `GET {base}/inbox?since=…&to=…`
+
+Everything that arrived at the community's WhatsApp Business number after
+`since` (ISO 8601), regardless of who sent it. `to` is that number in
+digits-only E.164 — the app sends whatever is set in Settings → Messaging →
+Community WhatsApp number.
+
+```json
+[
+  {
+    "from": "6281311112222",
+    "text": "Hi, is there still space this week?",
+    "timestamp": "2026-08-25T04:12:00Z",
+    "profileName": "Wayan",
+    "clientRef": "9F2A1C4E-…"
+  }
+]
+```
+
+`from` is required and should be digits-only E.164; the app normalises it
+either way. `profileName` and `clientRef` are optional — include `clientRef`
+when your relay already knows which client the number belongs to, and
+`profileName` (the WhatsApp display name) so a first-time sender gets a real
+name instead of a placeholder.
+
+The app polls this every 30 seconds and matches each message to a client by
+`clientRef` first, then by phone number. **A sender nobody recognises becomes a
+new client** in the Others category, untriaged and unbooked, so nothing is
+silently dropped. Duplicate deliveries are ignored when the text and timestamp
+match something already stored, but returning each message once is cheaper.
+
 ### `GET {base}/messages?clientRef=…&since=…`
 
 Returns messages received from that client after `since` (ISO 8601).

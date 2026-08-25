@@ -17,19 +17,17 @@ import Foundation
 import UIKit
 
 struct CalendarView: View {
-    @Environment(\.modelContext) private var context
     @Query private var clients: [Client]
-    @Query(sort: \Handler.createdAt) private var handlers: [Handler]
 
     @State private var scope: CalendarScope = .day
     @State private var anchorDay: Date = .now
     @State private var selectedClient: Client?
-    @State private var showingRebuildConfirm = false
-    @State private var lastReport: SchedulingReport?
 
     /// Points per hour. Enough that a 45-minute session is still tappable.
     private let hourHeight: CGFloat = 64
     private let gutterWidth: CGFloat = 56
+    /// Below this a day column can't show a name, so we scroll instead.
+    private let minimumDayWidth: CGFloat = 132
 
     var body: some View {
         VStack(spacing: 0) {
@@ -42,7 +40,7 @@ struct CalendarView: View {
                 } description: {
                     Text(clients.isEmpty
                          ? "Upload a spreadsheet to get started."
-                         : "No sessions are on the calendar yet. Rebuild the schedule to place everyone.")
+                         : "Nobody is booked in this range. Try another week, or import again from Upload.")
                 }
             } else {
                 timeline
@@ -51,6 +49,8 @@ struct CalendarView: View {
         .navigationTitle("Schedule")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            // One control only — a second glass capsule beside this one
+            // crowds it on iPadOS 26.
             ToolbarItem(placement: .topBarTrailing) {
                 Picker("View", selection: $scope) {
                     ForEach(CalendarScope.allCases) { option in
@@ -60,41 +60,9 @@ struct CalendarView: View {
                 .pickerStyle(.segmented)
                 .frame(width: 150)
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        showingRebuildConfirm = true
-                    } label: {
-                        Label("Rebuild schedule", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                } label: {
-                    Label("Options", systemImage: "ellipsis.circle")
-                }
-            }
         }
         .navigationDestination(item: $selectedClient) { client in
             ClientDetailView(client: client)
-        }
-        .confirmationDialog(
-            "Rebuild the whole schedule?",
-            isPresented: $showingRebuildConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Rebuild", role: .destructive) { rebuild() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Everyone gets a freshly randomised handler and a new slot. Chats are kept.")
-        }
-        .alert(
-            "Schedule rebuilt",
-            isPresented: Binding(
-                get: { lastReport != nil },
-                set: { if !$0 { lastReport = nil } }
-            )
-        ) {
-            Button("OK") { lastReport = nil }
-        } message: {
-            Text(lastReport?.summary ?? "")
         }
     }
 
@@ -142,29 +110,45 @@ struct CalendarView: View {
     // MARK: - Timeline
 
     private var timeline: some View {
-        ScrollView(.vertical) {
-            HStack(alignment: .top, spacing: 0) {
-                hourGutter
-                    .frame(width: gutterWidth)
+        GeometryReader { geometry in
+            // Divide whatever's left after the hour gutter between the days.
+            // Only fall back to side-scrolling when that would squeeze the
+            // columns below a readable width.
+            let available = geometry.size.width - gutterWidth
+            let dayCount = max(1, weekDays.count)
+            let evenWidth = available / CGFloat(dayCount)
+            let columnWidth = max(evenWidth, minimumDayWidth)
+            let fits = evenWidth >= minimumDayWidth
 
-                if scope == .day {
-                    dayColumn(for: anchorDay)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    // A week doesn't fit comfortably on iPhone, so the columns
-                    // keep a usable minimum and scroll sideways instead.
-                    ScrollView(.horizontal) {
+            ScrollView(.vertical) {
+                HStack(alignment: .top, spacing: 0) {
+                    hourGutter
+                        .frame(width: gutterWidth)
+
+                    if scope == .day {
+                        dayColumn(for: anchorDay)
+                            .frame(width: max(available, minimumDayWidth))
+                    } else if fits {
                         HStack(alignment: .top, spacing: 1) {
                             ForEach(weekDays, id: \.self) { day in
                                 dayColumn(for: day, showsHeading: true)
-                                    .frame(minWidth: 150)
+                                    .frame(width: columnWidth)
                             }
                         }
+                    } else {
+                        ScrollView(.horizontal) {
+                            HStack(alignment: .top, spacing: 1) {
+                                ForEach(weekDays, id: \.self) { day in
+                                    dayColumn(for: day, showsHeading: true)
+                                        .frame(width: columnWidth)
+                                }
+                            }
+                        }
+                        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
                     }
-                    .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
                 }
             }
-            .padding(.bottom, 24)
+            .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         }
     }
 
@@ -399,10 +383,6 @@ struct CalendarView: View {
         return date.formatted(.dateTime.hour())
     }
 
-    private func rebuild() {
-        lastReport = SchedulingService.autoSchedule(clients: clients, handlers: handlers)
-        try? context.save()
-    }
 }
 
 // MARK: - Scope

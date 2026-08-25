@@ -168,6 +168,12 @@ final class MessagingService {
     var channel: MessagingChannel = .whatsApp
     var defaultCountryCode: String = "62"
     var relayBaseURL: String = ""
+    /// The community's own WhatsApp Business number — the one clients message.
+    var communityNumber: String = "6282338514166"
+
+    private(set) var isSyncingInbox = false
+    /// Set after a sync so the UI can say when it last heard from the relay.
+    private(set) var lastInboxSyncAt: Date?
 
     private(set) var isSending = false
     /// Set when a send fails, so the chat can surface it.
@@ -181,6 +187,8 @@ final class MessagingService {
         channel = settings.messagingChannel
         defaultCountryCode = settings.defaultCountryCode
         relayBaseURL = settings.relayBaseURL
+        communityNumber = settings.communityWhatsAppNumber
+        lastInboxSyncAt = settings.lastInboxSyncAt
     }
 
     // MARK: - Outcome
@@ -283,6 +291,68 @@ final class MessagingService {
         } catch {
             return fail(.transport(error.localizedDescription))
         }
+    }
+
+    // MARK: - Inbox
+
+    /// One message that arrived at the community's WhatsApp number.
+    struct InboundMessage {
+        let from: String
+        let text: String
+        let timestamp: Date
+        /// Set when the relay already knows which client this is.
+        let clientRef: UUID?
+        /// WhatsApp profile name, used when we have to create a new client.
+        let profileName: String?
+    }
+
+    /// Everything the relay has received at the community number since `since`,
+    /// regardless of which client it came from.
+    ///
+    /// `GET {relay}/inbox?since=…` — see RELAY.md.
+    func fetchInbox(since: Date) async -> [InboundMessage] {
+        guard isRelayConfigured else { return [] }
+        let base = relayBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard var url = URL(string: base) else { return [] }
+        url.append(path: "inbox")
+
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "since", value: ISO8601DateFormatter().string(from: since)),
+            URLQueryItem(name: "to", value: communityNumber.filter(\.isNumber))
+        ]
+        guard let query = components?.url else { return [] }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: query)
+            guard let status = (response as? HTTPURLResponse)?.statusCode,
+                  (200..<300).contains(status),
+                  let rows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+            else { return [] }
+
+            let formatter = ISO8601DateFormatter()
+            return rows.compactMap { row in
+                guard let from = row["from"] as? String,
+                      let text = row["text"] as? String
+                else { return nil }
+                return InboundMessage(
+                    from: from,
+                    text: text,
+                    timestamp: (row["timestamp"] as? String).flatMap(formatter.date(from:)) ?? .now,
+                    clientRef: (row["clientRef"] as? String).flatMap(UUID.init(uuidString:)),
+                    profileName: row["profileName"] as? String
+                )
+            }
+        } catch {
+            return []
+        }
+    }
+
+    func beginInboxSync() { isSyncingInbox = true }
+
+    func finishInboxSync(at date: Date) {
+        isSyncingInbox = false
+        lastInboxSyncAt = date
     }
 
     /// Pulls messages the relay has received since `since`.

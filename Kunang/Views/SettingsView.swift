@@ -27,6 +27,7 @@ struct SettingsView: View {
 
     @State private var showRescheduleConfirm = false
     @State private var rescheduleReport: SchedulingReport?
+    @State private var inboxResult: InboxSync.Result?
 
     private var settings: CommunitySettings? { settingsRows.first }
 
@@ -204,6 +205,42 @@ struct SettingsView: View {
                     .frame(width: 80)
             }
 
+            LabeledContent("Community WhatsApp number") {
+                TextField("6282338514166", text: binding(settings, \.communityWhatsAppNumber))
+                    .keyboardType(.phonePad)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            if messaging.isRelayConfigured {
+                LabeledContent("Inbox") {
+                    if messaging.isSyncingInbox {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Checking…")
+                        }
+                    } else if let last = messaging.lastInboxSyncAt {
+                        Text("Checked \(last.formatted(date: .omitted, time: .shortened))")
+                    } else {
+                        Text("Not checked yet")
+                    }
+                }
+                .foregroundStyle(.secondary)
+                .font(.footnote)
+
+                Button {
+                    Task { inboxResult = await InboxSync.run(messaging: messaging, settings: settings, context: context) }
+                } label: {
+                    Label("Check for new messages now", systemImage: "tray.and.arrow.down")
+                }
+                .disabled(messaging.isSyncingInbox)
+
+                if let inboxResult {
+                    Text(inboxResult.summary)
+                        .font(.footnote)
+                        .foregroundStyle(inboxResult.isEmpty ? .secondary : .green)
+                }
+            }
+
             if settings.messagingChannel == .relay {
                 LabeledContent("Relay address") {
                     TextField("https://…", text: binding(settings, \.relayBaseURL))
@@ -228,6 +265,11 @@ struct SettingsView: View {
         } footer: {
             Text("""
                 Live mode sends for real. Demo mode never leaves the iPad.
+
+                Anyone who messages the community number turns up here — a \
+                known number lands in that person's chat, an unknown one \
+                arrives as a new intake in Others. This needs the relay \
+                running; deep links can't receive anything.
 
                 Two things worth knowing: WhatsApp's business policy restricts \
                 health information, so keep live messages to invitations and \

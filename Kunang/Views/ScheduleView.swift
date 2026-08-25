@@ -11,18 +11,14 @@ import SwiftData
 import Foundation
 
 struct ScheduleView: View {
-    @Environment(\.modelContext) private var context
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Query private var clients: [Client]
-    @Query(sort: \Handler.createdAt) private var handlers: [Handler]
 
     let priority: Priority?
 
     @State private var sortOrder = [KeyPathComparator(\Client.sortDate, order: .forward)]
     @State private var search = ""
     @State private var selectedClient: Client?
-    @State private var showingRebuildConfirm = false
-    @State private var lastReport: SchedulingReport?
 
     var body: some View {
         Group {
@@ -49,12 +45,6 @@ struct ScheduleView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button {
-                        showingRebuildConfirm = true
-                    } label: {
-                        Label("Rebuild schedule", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    Divider()
                     Section("Sort by") {
                         Button("Session time") { sortOrder = [KeyPathComparator(\Client.sortDate, order: .forward)] }
                         Button("Name") { sortOrder = [KeyPathComparator(\Client.name, order: .forward)] }
@@ -71,27 +61,6 @@ struct ScheduleView: View {
         .navigationDestination(item: $selectedClient) { client in
             ClientDetailView(client: client)
         }
-        .confirmationDialog(
-            "Rebuild the whole schedule?",
-            isPresented: $showingRebuildConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Rebuild", role: .destructive) { rebuild() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Everyone gets a freshly randomised handler and a new slot. Chats are kept.")
-        }
-        .alert(
-            "Schedule rebuilt",
-            isPresented: Binding(
-                get: { lastReport != nil },
-                set: { if !$0 { lastReport = nil } }
-            )
-        ) {
-            Button("OK") { lastReport = nil }
-        } message: {
-            Text(lastReport?.summary ?? "")
-        }
     }
 
     // MARK: - Table (iPad / regular width)
@@ -103,9 +72,16 @@ struct ScheduleView: View {
 
     private var table: some View {
         GeometryReader { geometry in
+            // iPadOS 26 floats the sidebar over the detail column, so the
+            // first column would sit underneath it. Clear the reported safe
+            // area, plus a little breathing room.
+            let leading = max(geometry.safeAreaInsets.leading, 0) + 12
+            let usable = max(0, geometry.size.width - leading)
+
             ScrollView(.horizontal) {
                 tableCore
-                    .frame(width: max(geometry.size.width, Self.minimumTableWidth))
+                    .frame(width: max(usable, Self.minimumTableWidth))
+                    .padding(.leading, leading)
             }
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
@@ -225,11 +201,6 @@ struct ScheduleView: View {
             }
         }
         return result.sorted(using: sortOrder)
-    }
-
-    private func rebuild() {
-        lastReport = SchedulingService.autoSchedule(clients: clients, handlers: handlers)
-        try? context.save()
     }
 }
 
