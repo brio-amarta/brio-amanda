@@ -92,7 +92,7 @@ struct ScheduleView: View {
     }
 
     /// Breathing room between the sidebar edge and the first column.
-    private static let gutter: CGFloat = 16
+    private static let gutter: CGFloat = 20
 
     private var tableCore: some View {
         Table(visibleClients, sortOrder: $sortOrder) {
@@ -106,7 +106,7 @@ struct ScheduleView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .width(min: 140)
+            .width(min: 120)
 
             TableColumn("Age", value: \.age) { client in
                 Text(client.age == 0 ? "—" : "\(client.age)")
