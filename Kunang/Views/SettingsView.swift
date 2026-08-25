@@ -261,6 +261,24 @@ struct SettingsView: View {
                 )
                 .foregroundStyle(.orange)
                 .font(.footnote)
+            } else if settings.messagingChannel != .relay {
+                // The relay is up but sending still bounces out to another app.
+                // On iPad that's often WhatsApp Business, which doesn't exist.
+                VStack(alignment: .leading, spacing: 6) {
+                    Label(
+                        "Your relay is running, but sending still opens \(settings.messagingChannel.rawValue).",
+                        systemImage: "arrow.up.forward.app"
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                    Button {
+                        channelBinding(settings).wrappedValue = .relay
+                    } label: {
+                        Label("Send through the relay instead", systemImage: "antenna.radiowaves.left.and.right")
+                    }
+                    .font(.footnote.weight(.semibold))
+                }
             }
 
             if settings.messagingChannel == .iMessage && !SystemMessageComposer.canSend {

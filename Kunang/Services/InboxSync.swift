@@ -100,7 +100,10 @@ enum InboxSync {
 
             let record = ChatMessage(
                 text: message.text,
-                isFromOwner: false,
+                isFromOwner: message.isOutbound,
+                // Marks the relay's own replies so the owner can tell at a
+                // glance what they didn't write themselves.
+                isGenerated: message.isAutomatic,
                 isLive: true,
                 channel: .relay,
                 delivery: .delivered,
@@ -110,8 +113,9 @@ enum InboxSync {
             context.insert(record)
             result.newMessages += 1
 
-            // Somebody who writes in is no longer waiting silently.
-            if client.status == .noResponse || client.status == .newIntake {
+            // Somebody who writes in is no longer waiting silently. An
+            // automatic reply going out doesn't count as them responding.
+            if !message.isOutbound, client.status == .noResponse || client.status == .newIntake {
                 client.status = .inProgress
             }
             newest = max(newest, message.timestamp)
@@ -131,12 +135,25 @@ enum InboxSync {
 
     // MARK: - Helpers
 
-    /// Guards against the relay replaying a message we already filed.
+    /// Guards against filing the same message twice.
+    ///
+    /// Inbound is matched tightly — the relay echoes the timestamp it stored,
+    /// so it lines up almost exactly.
+    ///
+    /// Outbound needs a looser window. A message the owner sends from the app
+    /// is written locally the moment they tap send, then comes back from the
+    /// relay stamped with *server* time seconds later. Same message, two
+    /// clocks. Matching on text within a couple of minutes catches that
+    /// without needing the two to agree.
     private static func alreadyStored(_ message: MessagingService.InboundMessage, on client: Client) -> Bool {
-        client.liveMessages.contains { stored in
-            stored.isFromOwner == false
+        // Automatic replies only ever originate at the relay, so there's never
+        // a local copy to reconcile — a tight window is enough, and it avoids
+        // suppressing a genuine repeat.
+        let tolerance: TimeInterval = (message.isOutbound && !message.isAutomatic) ? 120 : 1
+        return client.liveMessages.contains { stored in
+            stored.isFromOwner == message.isOutbound
                 && stored.text == message.text
-                && abs(stored.timestamp.timeIntervalSince(message.timestamp)) < 1
+                && abs(stored.timestamp.timeIntervalSince(message.timestamp)) < tolerance
         }
     }
 

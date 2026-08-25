@@ -409,14 +409,17 @@ struct ClientChatPane: View {
             hasPrefilled = true
             draft = await chat.draftOpener(for: client)
         }
-        // Opening a Live thread checks straight away, then keeps checking
-        // while it's on screen, so a reply lands in seconds rather than
-        // waiting on the slower background poll.
+        // Opening any client's chat checks immediately — the owner is looking
+        // at this thread right now, so it should be current before they read
+        // it. A Live thread then keeps checking while it's on screen, so a
+        // reply lands in seconds rather than waiting on the background poll.
         .task(id: mode) {
-            guard mode == .live, messaging.isRelayConfigured else { return }
+            guard messaging.isRelayConfigured else { return }
+            await syncInbox()
+            guard mode == .live else { return }
             while !Task.isCancelled {
-                await syncInbox()
                 try? await Task.sleep(for: .seconds(5))
+                await syncInbox()
             }
         }
         .sheet(isPresented: $showSystemComposer) {

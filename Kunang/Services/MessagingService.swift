@@ -295,8 +295,10 @@ final class MessagingService {
 
     // MARK: - Inbox
 
-    /// One message that arrived at the community's WhatsApp number.
+    /// One message the relay has, in either direction.
     struct InboundMessage {
+        /// The client's number — the sender for inbound, the recipient for
+        /// outbound. Either way it identifies whose thread this belongs to.
         let from: String
         let text: String
         let timestamp: Date
@@ -304,6 +306,11 @@ final class MessagingService {
         let clientRef: UUID?
         /// WhatsApp profile name, used when we have to create a new client.
         let profileName: String?
+        /// True for messages the community sent — including the relay's own
+        /// automatic replies and intake questions.
+        let isOutbound: Bool
+        /// True when the relay generated it rather than a person typing it.
+        let isAutomatic: Bool
     }
 
     /// Everything the relay has received at the community number since `since`,
@@ -339,20 +346,19 @@ final class MessagingService {
                 let sender = (row["from"] as? String) ?? (row["phone"] as? String)
                 guard let sender, let text = row["text"] as? String else { return nil }
 
-                // /inbox returns both directions. Anything we sent is already
-                // in the thread — importing it would duplicate the message and
-                // attribute it to the client.
-                if let direction = row["direction"] as? String,
-                   direction.lowercased().hasPrefix("out") {
-                    return nil
-                }
+                // Both directions are imported. The relay's automatic replies
+                // and intake questions are outbound, and without them the
+                // owner sees a client answering "1" with no visible question.
+                let direction = (row["direction"] as? String)?.lowercased() ?? "in"
 
                 return InboundMessage(
                     from: sender,
                     text: text,
                     timestamp: (row["timestamp"] as? String).flatMap(formatter.date(from:)) ?? .now,
                     clientRef: (row["clientRef"] as? String).flatMap(UUID.init(uuidString:)),
-                    profileName: (row["profileName"] as? String) ?? (row["name"] as? String)
+                    profileName: (row["profileName"] as? String) ?? (row["name"] as? String),
+                    isOutbound: direction.hasPrefix("out"),
+                    isAutomatic: (row["auto"] as? Bool) ?? false
                 )
             }
         } catch {

@@ -43,6 +43,7 @@ enum SidebarItem: Hashable {
 
 struct RootView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var clients: [Client]
 
     @State private var selection: SidebarItem? = .overview
@@ -78,6 +79,16 @@ struct RootView: View {
             while !Task.isCancelled {
                 await InboxSync.run(messaging: messaging, settings: settings, context: context)
                 try? await Task.sleep(for: .seconds(10))
+            }
+        }
+        // Coming back from the background suspends the loop above, so anything
+        // that arrived while the app was away would wait out the next tick.
+        // Check straight away instead.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task {
+                let settings = CommunitySettings.current(in: context)
+                await InboxSync.run(messaging: messaging, settings: settings, context: context)
             }
         }
     }
