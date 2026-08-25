@@ -1,6 +1,6 @@
 //
 //  CSVImporter.swift
-//  Mentalzz
+//  Kunang
 //
 //  Parses a CSV/TSV export into draft clients. Column names are matched
 //  loosely so owners don't have to rename their spreadsheet headers.

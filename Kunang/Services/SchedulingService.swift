@@ -1,6 +1,6 @@
 //
 //  SchedulingService.swift
-//  Mentalzz
+//  Kunang
 //
 //  Community hours, session length and slots per day all come from
 //  CommunitySettings, which the owner edits in Settings. This file holds the
@@ -274,6 +274,6 @@ enum SchedulingService {
     private static func sessionLink(for client: Client, at date: Date) -> String {
         let token = String(client.uuid.uuidString.prefix(8)).lowercased()
         let day = date.formatted(.iso8601.year().month().day())
-        return "mentalzz.community/s/\(day)-\(token)"
+        return "kunang.community/s/\(day)-\(token)"
     }
 }

@@ -1,6 +1,6 @@
 //
 //  ClientDetailView.swift
-//  Mentalzz
+//  Kunang
 //
 //  Left: the client record with editable handler, category, status and slot.
 //  Right: the chat, drafted and answered by the on-device model.
@@ -51,6 +51,8 @@ struct ClientProfilePane: View {
 
     @State private var slotDay: Date = .now
     @State private var clashWarning = false
+    @State private var isEditingNotes = false
+    @FocusState private var notesFocused: Bool
 
     var body: some View {
         List {
@@ -84,10 +86,46 @@ struct ClientProfilePane: View {
                 }
             }
 
-            Section("Notes") {
-                TextEditor(text: $client.notes)
-                    .frame(minHeight: 120)
-                    .font(.callout)
+            // Notes carry what the client actually said, so they're read-only
+            // until the owner deliberately taps Edit. A stray tap on a
+            // TextEditor used to be enough to alter them.
+            Section {
+                if isEditingNotes {
+                    TextEditor(text: $client.notes)
+                        .frame(minHeight: 140)
+                        .font(.callout)
+                        .focused($notesFocused)
+                } else if client.notes.isEmpty {
+                    Text("No notes yet.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(client.notes)
+                        .font(.callout)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } header: {
+                HStack {
+                    Text("Notes")
+                    Spacer()
+                    Button {
+                        toggleNotesEditing()
+                    } label: {
+                        Label(
+                            isEditingNotes ? "Done" : "Edit",
+                            systemImage: isEditingNotes ? "checkmark" : "square.and.pencil"
+                        )
+                        .labelStyle(.titleAndIcon)
+                        .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.borderless)
+                    .textCase(nil)
+                }
+            } footer: {
+                if isEditingNotes {
+                    Text("Tap Done to save.")
+                }
             }
 
             Section("Handler") {
@@ -107,12 +145,37 @@ struct ClientProfilePane: View {
                 }
             }
 
-            Section("Status") {
+            Section {
                 Picker("Status", selection: statusBinding) {
                     ForEach(ClientStatus.allCases) { status in
                         Label(status.rawValue, systemImage: status.symbol).tag(status)
                     }
                 }
+
+                // The common ending, one tap instead of hunting the picker.
+                if client.status == .completed {
+                    if let finished = client.completedAt {
+                        LabeledContent("Completed", value: finished.formatted(date: .abbreviated, time: .shortened))
+                    }
+                    Button {
+                        statusBinding.wrappedValue = client.scheduledAt == nil ? .waitingForAppointment : .scheduled
+                    } label: {
+                        Label("Reopen this client", systemImage: "arrow.uturn.backward")
+                    }
+                } else {
+                    Button {
+                        statusBinding.wrappedValue = .completed
+                    } label: {
+                        Label("Mark session completed", systemImage: "checkmark.seal.fill")
+                    }
+                    .tint(.green)
+                }
+            } header: {
+                Text("Status")
+            } footer: {
+                Text(client.status == .completed
+                     ? "Completed clients keep their slot in the calendar but are skipped when the schedule is rebuilt."
+                     : "Marking someone completed stamps the finish time and takes them out of future rebuilds.")
             }
 
             Section {
@@ -158,9 +221,24 @@ struct ClientProfilePane: View {
         .onAppear {
             slotDay = client.scheduledAt ?? Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
         }
-        .onDisappear { try? context.save() }
+        .onDisappear {
+            // Leaving the screen mid-edit still commits what was typed.
+            isEditingNotes = false
+            try? context.save()
+        }
         .alert("That slot just got taken", isPresented: $clashWarning) {
             Button("OK", role: .cancel) {}
+        }
+    }
+
+    private func toggleNotesEditing() {
+        if isEditingNotes {
+            isEditingNotes = false
+            notesFocused = false
+            try? context.save()
+        } else {
+            isEditingNotes = true
+            notesFocused = true
         }
     }
 
@@ -428,11 +506,14 @@ struct ClientChatPane: View {
                 }
             }
 
-            HStack(alignment: .bottom, spacing: 10) {
+            // WhatsApp proportions: a slim capsule that hugs the text, with
+            // the action buttons sitting outside it rather than inflating it.
+            HStack(alignment: .bottom, spacing: 8) {
                 TextField(mode == .demo ? "Message" : "Message (sends for real)", text: $draft, axis: .vertical)
+                    .font(.callout)
                     .lineLimit(1...6)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                     .background(Color(.secondarySystemBackground), in: .capsule)
 
                 if mode == .live {
@@ -441,10 +522,11 @@ struct ClientChatPane: View {
                         showLogReply = true
                     } label: {
                         Image(systemName: "square.and.pencil")
-                            .font(.system(size: 18))
+                            .font(.system(size: 15))
                     }
                     .buttonStyle(.bordered)
                     .buttonBorderShape(.circle)
+                    .controlSize(.small)
                     .help("Log a reply you received")
                 }
 
@@ -452,10 +534,11 @@ struct ClientChatPane: View {
                     Task { await regenerate() }
                 } label: {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 18))
+                        .font(.system(size: 15))
                 }
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.circle)
+                .controlSize(.small)
                 .disabled(chat.isDrafting || chat.isReplying)
                 .help("Redraft with the on-device model")
 
@@ -466,11 +549,12 @@ struct ClientChatPane: View {
                         ProgressView().controlSize(.small)
                     } else {
                         Image(systemName: mode == .demo ? "paperplane.fill" : "arrow.up.forward.app.fill")
-                            .font(.system(size: 18))
+                            .font(.system(size: 15))
                     }
                 }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.circle)
+                .controlSize(.small)
                 .disabled(sendDisabled)
             }
 
@@ -483,7 +567,8 @@ struct ClientChatPane: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(12)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .background(.bar)
     }
 

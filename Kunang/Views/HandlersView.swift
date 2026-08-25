@@ -1,6 +1,6 @@
 //
 //  HandlersView.swift
-//  Mentalzz
+//  Kunang
 //
 //  Add handlers, see the leaderboard, and drill into one handler's load.
 //

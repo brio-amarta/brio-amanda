@@ -1,6 +1,6 @@
 //
 //  BaliRegion.swift
-//  Mentalzz
+//  Kunang
 //
 //  The community only books in-person sessions for people in Bali.
 //  Everyone else is referred to a service closer to home.

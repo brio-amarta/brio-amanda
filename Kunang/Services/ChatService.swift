@@ -1,6 +1,6 @@
 //
 //  ChatService.swift
-//  Mentalzz
+//  Kunang
 //
 //  Drafts the opening outreach message for a client and generates the
 //  client's reply after the owner sends something. All on-device.
@@ -49,7 +49,7 @@ final class ChatService {
                 This person lives outside Bali, so the group cannot see them in person. Write a warm, \
                 gentle message that acknowledges them, explains kindly that the group only runs \
                 sessions in Bali, and points them toward support closer to home. Never sound like a \
-                rejection letter. Two to three sentences. No emoji. Sign off as "Mentalzz Community".
+                rejection letter. Two to three sentences. No emoji. Sign off as "Kunang Community".
                 """
             prompt = """
                 Person: \(client.name), age \(client.age), in \(client.location).
@@ -64,7 +64,7 @@ final class ChatService {
                 Write a warm first outreach to someone who filled in the community's intake form. \
                 Acknowledge how they might be feeling without diagnosing them, then invite them to \
                 the session that has been booked for them. Two to three sentences, plain language, \
-                no emoji, no clinical jargon. Sign off as "Mentalzz Community".
+                no emoji, no clinical jargon. Sign off as "Kunang Community".
                 """
             let when = client.scheduledAt?.formatted(date: .complete, time: .shortened) ?? "a time we'll confirm shortly"
             prompt = """
@@ -151,7 +151,7 @@ final class ChatService {
                 Hi \(client.name), thank you for reaching out to us. Our sessions run in person in Bali, \
                 so we're not able to see you from \(client.location) — but we really don't want to leave \
                 you without anything. \(hint ?? "There are community and hospital counselling services near you, and we're happy to help you find one.")
-                — Mentalzz Community
+                — Kunang Community
                 """
         }
         let when = client.scheduledAt?.formatted(date: .complete, time: .shortened) ?? "a time we'll confirm shortly"
@@ -159,7 +159,7 @@ final class ChatService {
             Hi \(client.name), thanks for filling in our form — it takes something to do that. \
             We've saved you a \(SchedulingService.sessionMinutes)-minute session on \(when) with \(client.handler?.name ?? "one of our handlers"). \
             Let us know if that time works for you.
-            — Mentalzz Community
+            — Kunang Community
             """
     }
 

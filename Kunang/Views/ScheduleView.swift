@@ -1,6 +1,6 @@
 //
 //  ScheduleView.swift
-//  Mentalzz
+//  Kunang
 //
 //  The sortable session table. Pass a priority to show one category,
 //  or nil for the full schedule.
@@ -96,7 +96,22 @@ struct ScheduleView: View {
 
     // MARK: - Table (iPad / regular width)
 
+    /// The columns' minimum widths add up to roughly this. Below it SwiftUI
+    /// starts squeezing names and locations into ellipses, so we scroll
+    /// sideways instead of compressing.
+    private static let minimumTableWidth: CGFloat = 1120
+
     private var table: some View {
+        GeometryReader { geometry in
+            ScrollView(.horizontal) {
+                tableCore
+                    .frame(width: max(geometry.size.width, Self.minimumTableWidth))
+            }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        }
+    }
+
+    private var tableCore: some View {
         Table(visibleClients, sortOrder: $sortOrder) {
             TableColumn("Name", value: \.name) { client in
                 Button {

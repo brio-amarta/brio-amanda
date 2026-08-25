@@ -1,6 +1,6 @@
 //
 //  OverviewView.swift
-//  Mentalzz
+//  Kunang
 //
 //  Home screen: profile header plus one card per category.
 //
@@ -153,18 +153,24 @@ struct CategoryCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
+            // "Crisis" and "Others" fit on one line while "High Priority" and
+            // "Referral Required" wrap, which used to leave every card with a
+            // different title height and icon position. Reserving two lines and
+            // giving the icon a fixed frame pins all five to the same grid.
+            HStack(alignment: .top, spacing: 8) {
                 Text(priority.rawValue)
                     .font(.title.bold())
                     .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 8)
+                    .lineLimit(2, reservesSpace: true)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+
                 Image(systemName: priority.symbol)
                     .font(.title3)
                     .foregroundStyle(priority.tint)
+                    .frame(width: 28, height: 28, alignment: .topTrailing)
             }
 
-            Spacer(minLength: 24)
+            Spacer(minLength: 16)
 
             HStack(alignment: .bottom) {
                 Spacer()

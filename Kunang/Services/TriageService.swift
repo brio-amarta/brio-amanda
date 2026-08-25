@@ -1,6 +1,6 @@
 //
 //  TriageService.swift
-//  Mentalzz
+//  Kunang
 //
 //  Runs each imported row through the on-device Foundation Model to decide a
 //  priority category. Location is always appended last so the model weighs it
@@ -66,7 +66,7 @@ final class TriageService {
         case .available:
             "Apple Intelligence is ready. Triage runs entirely on this device."
         case .unavailable(.deviceNotEligible):
-            "This device can't run Apple Intelligence. Mentalzz will use score-based rules instead."
+            "This device can't run Apple Intelligence. Kunang will use score-based rules instead."
         case .unavailable(.appleIntelligenceNotEnabled):
             "Turn on Apple Intelligence in Settings to let the model triage. Score-based rules will be used until then."
         case .unavailable(.modelNotReady):

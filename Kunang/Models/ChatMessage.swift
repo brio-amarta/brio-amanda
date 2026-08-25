@@ -1,6 +1,6 @@
 //
 //  ChatMessage.swift
-//  Mentalzz
+//  Kunang
 //
 
 import Foundation

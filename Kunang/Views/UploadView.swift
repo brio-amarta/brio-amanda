@@ -1,6 +1,6 @@
 //
 //  UploadView.swift
-//  Mentalzz
+//  Kunang
 //
 //  Attach a spreadsheet, let the on-device model triage it, then auto-build
 //  the schedule.
@@ -74,7 +74,7 @@ struct UploadView: View {
         } header: {
             Text("Spreadsheet")
         } footer: {
-            Text("CSV or TSV. Mentalzz looks for Name, Age, Location, Phone, Mental Health Score and Notes columns — any extra columns are passed to the model too. If your file is .xlsx, export it as CSV first.")
+            Text("CSV or TSV. Kunang looks for Name, Age, Location, Phone, Mental Health Score and Notes columns — any extra columns are passed to the model too. If your file is .xlsx, export it as CSV first.")
         }
     }
 

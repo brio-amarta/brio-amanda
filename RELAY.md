@@ -1,6 +1,6 @@
 # Relay server contract
 
-Mentalzz can send real WhatsApp messages through the Meta Cloud API, but the
+Kunang can send real WhatsApp messages through the Meta Cloud API, but the
 app never holds a Cloud API access token. Meta's own guidance is that these
 tokens are server-side only — anyone who extracts one from a shipped app can
 message as your business indefinitely. Receiving messages needs webhooks, which
@@ -28,7 +28,7 @@ Sends a message.
 ```
 
 `to` is digits-only E.164 — no `+`, no spaces. `clientRef` is the client's UUID
-inside Mentalzz; store it so inbound messages can be matched back.
+inside Kunang; store it so inbound messages can be matched back.
 
 Any 2xx means accepted. The app marks the message **Delivered**. Non-2xx bodies
 are shown to the owner verbatim (first 200 characters), so put something useful

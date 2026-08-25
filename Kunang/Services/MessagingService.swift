@@ -1,6 +1,6 @@
 //
 //  MessagingService.swift
-//  Mentalzz
+//  Kunang
 //
 //  Live messaging. Unlike the demo chat, nothing here invents a reply — a
 //  message either really leaves the iPad or it doesn't.
@@ -50,7 +50,7 @@ enum MessagingChannel: String, CaseIterable, Identifiable, Codable {
         case .whatsApp:
             "Opens WhatsApp with the message ready. You tap send there, then log their reply back here."
         case .iMessage:
-            "Opens the system message sheet. You tap send; iOS tells Mentalzz whether it went."
+            "Opens the system message sheet. You tap send; iOS tells Kunang whether it went."
         case .relay:
             "Sends through a server you host, which holds the WhatsApp Cloud API token. Two-way, but only once the relay is running."
         }
@@ -111,7 +111,7 @@ enum MessagingError: LocalizedError {
         case .noPhoneNumber:
             "This client has no phone number. Add one on their profile first."
         case .unusablePhoneNumber(let raw):
-            "\"\(raw)\" doesn't look like a phone number Mentalzz can dial."
+            "\"\(raw)\" doesn't look like a phone number Kunang can dial."
         case .channelUnavailable(let channel):
             "\(channel.rawValue) isn't available on this device."
         case .relayNotConfigured:

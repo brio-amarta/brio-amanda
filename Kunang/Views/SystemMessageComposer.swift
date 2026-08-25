@@ -1,6 +1,6 @@
 //
 //  SystemMessageComposer.swift
-//  Mentalzz
+//  Kunang
 //
 //  Wraps MFMessageComposeViewController. This is the only route iOS gives an
 //  app for sending an SMS/iMessage, and it always shows the sheet — the owner

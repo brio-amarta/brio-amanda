@@ -1,6 +1,6 @@
 //
-//  MentalzzApp.swift
-//  Mentalzz
+//  KunangApp.swift
+//  Kunang
 //
 //  Created by I Made Debrio Amarta on 20/08/26.
 //
@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct MentalzzApp: App {
+struct KunangApp: App {
 
     let container: ModelContainer = {
         let schema = Schema([Client.self, Handler.self, ChatMessage.self, CommunitySettings.self])

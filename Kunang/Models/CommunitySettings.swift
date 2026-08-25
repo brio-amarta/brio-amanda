@@ -1,6 +1,6 @@
 //
 //  CommunitySettings.swift
-//  Mentalzz
+//  Kunang
 //
 //  Everything the owner can change about how the community runs: opening
 //  hours, how long a session lasts, how many fit in a day, and how messages

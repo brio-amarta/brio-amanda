@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  Mentalzz
+//  Kunang
 //
 //  Created by I Made Debrio Amarta on 20/08/26.
 //
@@ -33,7 +33,7 @@ enum SidebarItem: Hashable {
         switch self {
         case .overview: "square.grid.2x2"
         case .upload: "tray.and.arrow.down"
-        case .schedule: "calendar"
+        case .schedule: "calendar.day.timeline.left"
         case .handlers: "person.2"
         case .settings: "gearshape"
         case .category(let priority): priority.symbol
@@ -59,6 +59,10 @@ struct RootView: View {
                 detail
             }
         }
+        // .automatic resolves to prominentDetail on iPad, which floats the
+        // sidebar *over* the detail column — that's what was covering the
+        // table. .balanced makes the two share the width instead.
+        .navigationSplitViewStyle(.balanced)
         .environment(triage)
         .environment(chat)
         .environment(messaging)
@@ -108,7 +112,7 @@ struct RootView: View {
                 }
             }
         }
-        .navigationTitle("Mentalzz")
+        .navigationTitle("Kunang Workspace")
         .listStyle(.sidebar)
     }
 
@@ -128,7 +132,7 @@ struct RootView: View {
         case .upload:
             UploadView(onFinished: { selection = .schedule })
         case .schedule:
-            ScheduleView(priority: nil)
+            CalendarView()
         case .handlers:
             HandlersView()
         case .settings:

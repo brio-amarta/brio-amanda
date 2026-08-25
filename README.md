@@ -1,4 +1,4 @@
-# Mentalzz
+# Kunang
 
 An iPad/iPhone app for running a community mental health group in Bali. The owner drops in a spreadsheet, the on-device model triages everyone, and the app builds a clash-free session schedule.
 
@@ -6,13 +6,13 @@ Built with SwiftUI, SwiftData and Apple's **Foundation Models** framework. Every
 
 ## Getting started
 
-1. Open `Mentalzz.xcodeproj` and run on an iPad (or iPad simulator).
+1. Open `Kunang.xcodeproj` and run on an iPad (or iPad simulator).
 2. Go to **Handlers** and add the people who run sessions. Nothing schedules until there's at least one.
 3. Go to **Upload**, pick `SampleData/sample-clients.csv`, and tap *Triage & build schedule*.
 
 ## How it works
 
-**Triage.** Every row from the spreadsheet — including columns Mentalzz doesn't recognise — is flattened into a prompt, with location appended last, and sent to the on-device model. It returns a category, an urgency (1–10) and a one-line reason. The instructions are editable in Upload → *Triage instructions*.
+**Triage.** Every row from the spreadsheet — including columns Kunang doesn't recognise — is flattened into a prompt, with location appended last, and sent to the on-device model. It returns a category, an urgency (1–10) and a one-line reason. The instructions are editable in Upload → *Triage instructions*.
 
 Anyone outside Bali is filed as **Referral Required** regardless of what the model says, since the community can't see them in person.
 
@@ -60,8 +60,8 @@ Any other columns are passed to the triage model as extra context. Score runs 0�
 ## Project layout
 
 ```
-Mentalzz/
-├── MentalzzApp.swift          App entry, SwiftData container
+Kunang/
+├── KunangApp.swift          App entry, SwiftData container
 ├── ContentView.swift          RootView — the split-view shell
 ├── PreviewData.swift          In-memory sample data for Xcode previews
 ├── Models/
@@ -80,7 +80,8 @@ Mentalzz/
 └── Views/
     ├── OverviewView.swift     Home stats + category cards
     ├── UploadView.swift       Spreadsheet import
-    ├── ScheduleView.swift     Sortable Table / compact list
+    ├── CalendarView.swift     Day/Week timeline — the Schedule screen
+    ├── ScheduleView.swift     Sortable Table / compact list, per category
     ├── HandlersView.swift     Leaderboard, stats, edit
     ├── SettingsView.swift     Hours, sessions, messaging, delays
     ├── SystemMessageComposer.swift MFMessageComposeViewController wrapper
@@ -90,6 +91,6 @@ Mentalzz/
 ## Notes
 
 - Apple Intelligence must be on for the model features. The app degrades gracefully without it.
-- Session links are placeholder strings (`mentalzz.community/s/…`) — wire them to a real video provider when you have one.
+- Session links are placeholder strings (`kunang.community/s/…`) — wire them to a real video provider when you have one.
 - Client replies in the **Demo** thread are generated fiction. The **Live** thread never invents anything.
 - Demo mode keeps the "nothing leaves the iPad" guarantee. Live mode deliberately breaks it — that's the point of it — so ship a privacy policy and accurate App Store privacy labels before publishing with Live enabled.

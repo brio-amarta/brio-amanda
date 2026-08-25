@@ -1,6 +1,6 @@
 //
 //  PreviewData.swift
-//  Mentalzz
+//  Kunang
 //
 //  In-memory sample data so Xcode previews have something to draw.
 //

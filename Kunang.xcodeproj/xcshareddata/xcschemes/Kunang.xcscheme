@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "870AF4653037469E00E79860"
-               BuildableName = "Mentalzz.app"
-               BlueprintName = "Mentalzz"
-               ReferencedContainer = "container:Mentalzz.xcodeproj">
+               BuildableName = "Kunang.app"
+               BlueprintName = "Kunang"
+               ReferencedContainer = "container:Kunang.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "870AF4653037469E00E79860"
-            BuildableName = "Mentalzz.app"
-            BlueprintName = "Mentalzz"
-            ReferencedContainer = "container:Mentalzz.xcodeproj">
+            BuildableName = "Kunang.app"
+            BlueprintName = "Kunang"
+            ReferencedContainer = "container:Kunang.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "870AF4653037469E00E79860"
-            BuildableName = "Mentalzz.app"
-            BlueprintName = "Mentalzz"
-            ReferencedContainer = "container:Mentalzz.xcodeproj">
+            BuildableName = "Kunang.app"
+            BlueprintName = "Kunang"
+            ReferencedContainer = "container:Kunang.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

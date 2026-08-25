@@ -1,6 +1,6 @@
 //
 //  SettingsView.swift
-//  Mentalzz
+//  Kunang
 //
 //  Everything the owner can change. Scheduling edits show a live preview of
 //  the slots they'd produce, so nobody has to re-run a whole import to find
