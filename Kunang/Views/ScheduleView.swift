@@ -54,9 +54,13 @@ struct ScheduleView: View {
         .searchable(text: $search, prompt: "Search name or location")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
+                // fixedSize is load-bearing: without it the toolbar hands the
+                // leading item a narrow width regardless of the space actually
+                // free, and "All Clients" collapses to "A…".
                 Text(title)
                     .font(.title2.bold())
                     .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 fractionBadge

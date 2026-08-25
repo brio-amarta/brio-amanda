@@ -70,8 +70,9 @@ and it hands the volunteer enough context to reply without asking again.
 - Seven lifecycle states: New, Waiting for appointment, Scheduled, In progress,
   Completed, Referred out, No response
 - Sortable table on iPad, list on iPhone, search by name or location
-- An **All Clients** view alongside the five category views, so the whole
-  community can be sorted by score, handler or session time in one place
+- An **All Clients** view sitting with Overview and Schedule rather than among
+  the categories, so the whole community can be sorted by score, handler or
+  session time in one place
 - Sidebar counts per category, with a marker on anyone still unbooked and
   uncontacted
 - Notes are read-only until Edit is tapped, so they can't be changed by accident

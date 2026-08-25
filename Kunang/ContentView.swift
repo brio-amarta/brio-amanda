@@ -103,14 +103,8 @@ struct RootView: View {
         List(selection: $selection) {
             Section {
                 row(.overview)
-                row(.upload)
-                row(.schedule)
-                row(.handlers)
-                row(.settings)
-            }
-
-            Section("Categories") {
-                // Everyone, before the five buckets they get split into.
+                // Everyone, sitting with the whole-community screens rather
+                // than among the five buckets people get split into.
                 NavigationLink(value: SidebarItem.allClients) {
                     Label {
                         HStack {
@@ -124,7 +118,13 @@ struct RootView: View {
                         Image(systemName: "person.3")
                     }
                 }
+                row(.upload)
+                row(.schedule)
+                row(.handlers)
+                row(.settings)
+            }
 
+            Section("Categories") {
                 ForEach(Priority.allCases) { priority in
                     NavigationLink(value: SidebarItem.category(priority)) {
                         Label {
