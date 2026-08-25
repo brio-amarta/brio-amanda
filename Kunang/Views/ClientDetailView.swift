@@ -760,7 +760,7 @@ struct MessageBubble: View {
                 Text(message.text)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .foregroundStyle(message.isFromOwner ? .white : .primary)
+                    .foregroundStyle(message.isFromOwner ? Color.white : Color.primary)
                     .background(bubbleFill, in: .rect(cornerRadius: 20))
 
                 HStack(spacing: 4) {

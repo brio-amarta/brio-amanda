@@ -237,7 +237,7 @@ struct SettingsView: View {
                 if let inboxResult {
                     Text(inboxResult.summary)
                         .font(.footnote)
-                        .foregroundStyle(inboxResult.isEmpty ? .secondary : .green)
+                        .foregroundStyle(inboxResult.isEmpty ? Color.secondary : Color.green)
                 }
             }
 
