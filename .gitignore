@@ -4,6 +4,10 @@
 # Xcode
 build/
 DerivedData/
+*.xcarchive
+*.ipa
+*.dSYM
+*.dSYM.zip
 *.xcuserstate
 *.xcworkspace/xcuserdata/
 xcuserdata/
@@ -34,5 +38,12 @@ relay/.dev.vars
 **/.dev.vars
 
 # Note: Mentalzz.xcodeproj/project.pbxproj is deliberately NOT ignored — the
-# build needs it. Xcode rewriting the signing identity in it is guarded by
-# scripts/pre-commit instead. Enable with: git config core.hooksPath scripts
+# build needs it, so .gitignore cannot protect it. Xcode rewriting the signing
+# identity in it is guarded by scripts/pre-commit instead.
+#
+# THE HOOK IS OPT-IN AND IS CURRENTLY NOT INSTALLED. Until someone runs
+#     git config core.hooksPath scripts
+# nothing stops Xcode from silently swapping DEVELOPMENT_TEAM or appending a
+# digit to PRODUCT_BUNDLE_IDENTIFIER. That is what broke Xcode Cloud Build 22.
+#
+# Expected identity: team P92NAYLB48, bundle ID com.brioamarta.amanda
