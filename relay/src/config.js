@@ -28,8 +28,9 @@ export const ORG = {
 }
 
 export const EMERGENCY = {
-  // LISA Suicide Prevention Helpline — Bali Bersama Bisa collective, 24h.
-  lisa: { id: '+62 811 3855 472', en: '+62 811 3815 472' },
+  // LISA Suicide Prevention Helpline was removed in August 2026 — the service
+  // is no longer running. Do not reinstate it without confirming it is live.
+  // Immediate danger goes to the ambulance service or the nearest IGD.
   ambulance: '119',
 }
 
@@ -92,15 +93,32 @@ export const ASK_CITY = {
   en: 'Which city or regency are you in right now? (for example: Denpasar, Gianyar, Buleleng)',
 }
 
+// Asked FIRST, before anything else, because every message after it is sent
+// in whichever language they pick. That means this one message cannot assume
+// a language — it carries both, and `id` and `en` are deliberately identical.
 export const ASK_LANGUAGE = {
-  id: `Bahasa apa yang paling nyaman untukmu?
+  id: `Halo, terima kasih sudah menghubungi ${ORG.name}. / Hi, thanks for reaching out to ${ORG.name}.
+
+Bahasa apa yang paling nyaman untukmu?
+Which language are you most comfortable in?
 
 1 — Bahasa Indonesia
 2 — English`,
-  en: `Which language are you most comfortable in?
+
+  en: `Halo, terima kasih sudah menghubungi ${ORG.name}. / Hi, thanks for reaching out to ${ORG.name}.
+
+Bahasa apa yang paling nyaman untukmu?
+Which language are you most comfortable in?
 
 1 — Bahasa Indonesia
 2 — English`,
+}
+
+// Shown when the very first answer isn't 1 or 2. Bilingual for the same
+// reason ASK_LANGUAGE is.
+export const DIDNT_UNDERSTAND_LANGUAGE = {
+  id: 'Balas dengan angka saja, ya — 1 atau 2. / Please reply with just the number — 1 or 2.',
+  en: 'Balas dengan angka saja, ya — 1 atau 2. / Please reply with just the number — 1 or 2.',
 }
 
 export const ASK_NEED = {

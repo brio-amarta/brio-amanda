@@ -147,11 +147,11 @@ reads like — generated from the code, so it can't drift from what gets sent.
 ```
 message received
   → stored, appears in Kunang on ↻
+  → language?          bilingual, asked first and on its own
   → automated reply    hours · response time · "not an emergency service"
                        · emergency options · self-help link
   → automated intake   immediate danger? ──yes──▶ emergency options, STOP
                        city or regency              no queue form, Crisis
-                       preferred language
                        what support do you need?
   → waiting message    tailored to the answers, plus "what to expect"
   → one of five priorities, into the human queue
@@ -162,10 +162,20 @@ and both language versions of every message. Edit that file; the logic in
 `src/intake.js` doesn't move. Run `npm test` afterwards — the tests assert that
 the required elements are still present in the greeting.
 
+**The language question comes first, alone.** Every message after it is sent in
+what they chose, so it has to be answered before the greeting can go out. It is
+the one bilingual message in the flow — Indonesian and English in the same
+bubble — because at that point we have nothing to base a guess on.
+
 **Answering "yes" to immediate danger ends the intake.** No city question, no
-language question. They get 119, the nearest IGD, LISA's 24-hour line, a
-suggestion to have someone stay with them, and means-restriction advice — then
-the bot goes silent. Nobody in danger should have to fill in a form.
+need question. They get 119 or the nearest IGD, a suggestion to have someone
+stay with them, and means-restriction advice — then the bot goes silent. Nobody
+in danger should have to fill in a form.
+
+**119 and the nearest IGD are the only emergency contacts.** The LISA Suicide
+Prevention Helpline was removed in August 2026 because the service stopped
+running, and a dead crisis number is worse than no number. Re-verify what's in
+`EMERGENCY` before every deployment.
 
 **Crisis language escalates at any step.** Someone in real distress won't
 reliably answer "1". If any message contains crisis phrasing — in Indonesian or
@@ -176,8 +186,10 @@ direction to be wrong in.
 **Answers are accepted as numbers or words.** "ya", "tidak", "not sure",
 "english" all work. Anything unparseable re-asks rather than guessing.
 
-**Language sticks once chosen.** Before intake, each reply matches the language
-of that message. After Q3, the stored preference wins.
+**Language sticks once chosen.** From Q1 onward the stored preference wins over
+the detector, so a one-word reply like "ok" can't flip the conversation into
+the wrong language. Detection is now only used for the crisis card when someone
+opens with distress before answering Q1.
 
 ### The five priorities
 

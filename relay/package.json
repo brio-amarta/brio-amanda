@@ -9,7 +9,8 @@
     "deploy": "wrangler deploy",
     "db:local": "wrangler d1 execute kunang-relay --local --file=./schema.sql",
     "db:remote": "wrangler d1 execute kunang-relay --remote --file=./schema.sql",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "transcripts": "node scripts/transcripts.js"
   },
   "devDependencies": {
     "wrangler": "^3.90.0"

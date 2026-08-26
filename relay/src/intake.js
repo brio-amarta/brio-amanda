@@ -4,22 +4,26 @@
 // Shape of the conversation:
 //
 //   message received
+//     → Q1 preferred language   ← bilingual, asked before anything else so
+//                                 every message below is in their language
 //     → greeting (hours, response time, "not an emergency service", emergency
 //       options, self-help link)
-//     → Q1 immediate danger?  ── yes ──▶ emergency options, STOP. No queue
-//     → Q2 city or regency          form. Marked Crisis.
-//     → Q3 preferred language
+//     → Q2 immediate danger?  ── yes ──▶ emergency options, STOP. No queue
+//     → Q3 city or regency          form. Marked Crisis.
 //     → Q4 what support do you need?
 //     → waiting message, tailored to the answers
 //     → priority assigned, human queue
 //
 // At every step, before the step runs, the person's free text is checked for
 // crisis language. Someone in real distress will not reliably answer "1".
+// That check runs BEFORE the language question too: anyone whose first
+// message says they want to die gets the emergency card immediately, in
+// whatever language we detected, rather than being asked to pick from a menu.
 
 import * as copy from './config.js'
 import { say } from './lang.js'
 
-export const STEPS = ['danger', 'city', 'language', 'need', 'queued', 'escalated']
+export const STEPS = ['language', 'danger', 'city', 'need', 'queued', 'escalated']
 
 // ── The five priorities, matching Kunang's Priority.swift ────────────────
 
@@ -224,8 +228,11 @@ export function advance(ctx) {
   // repeat the emergency card at them over and over).
   if (step !== 'escalated' && mentionsCrisis(normalised)) {
     const answers = { ...data, danger: data.danger ?? 'unknown', crisisLanguage: true }
+    // Their chosen language if we have it, the detector's guess if we don't —
+    // which is the case when crisis language arrives in the very first
+    // message, before the language question has been answered.
     return {
-      texts: [say(copy.IN_DANGER, lang)],
+      texts: [say(copy.IN_DANGER, data.language ?? lang)],
       state: { flow: 'intake', step: 'escalated', data: answers },
       priority: PRIORITY.crisis,
       summary: summarise({ ...answers, priority: PRIORITY.crisis, trigger: 'crisis language' }),
@@ -239,29 +246,54 @@ export function advance(ctx) {
     // Only reassure once per new conversation, so we never talk over a
     // volunteer who has picked the thread up.
     if (!ctx.isNewConversation) return null
-    return { texts: [say(copy.ALREADY_QUEUED, lang)], state }
+    return { texts: [say(copy.ALREADY_QUEUED, data.language ?? lang)], state }
   }
 
-  // ── Start ─────────────────────────────────────────────────────────────
+  // ── Start — ask the language, and nothing else ────────────────────────
+  // Deliberately alone: the greeting is long, and sending it before we know
+  // the language means sending it in a language they may not read.
   if (!step) {
     return {
-      texts: [say(copy.GREETING, lang)(ctx.firstName), say(copy.ASK_DANGER, lang)],
-      state: { flow: 'intake', step: 'danger', data: {} },
+      texts: [say(copy.ASK_LANGUAGE, lang)],
+      state: { flow: 'intake', step: 'language', data: {} },
     }
   }
 
-  // ── Q1 immediate danger ───────────────────────────────────────────────
+  // ── Q1 preferred language ─────────────────────────────────────────────
+  // Everything from here on is sent in what they chose.
+  if (step === 'language') {
+    const choice = parseChoice(normalised, 2, LANGUAGE_WORDS)
+    if (!choice) {
+      return {
+        texts: [say(copy.DIDNT_UNDERSTAND_LANGUAGE, lang), say(copy.ASK_LANGUAGE, lang)],
+        state,
+      }
+    }
+
+    const preferred = choice === 2 ? 'en' : 'id'
+    return {
+      texts: [
+        say(copy.GREETING, preferred)(ctx.firstName),
+        say(copy.ASK_DANGER, preferred),
+      ],
+      state: { flow: 'intake', step: 'danger', data: { ...data, language: preferred } },
+      language: preferred, // pin it on the contact, for volunteers too
+    }
+  }
+
+  // ── Q2 immediate danger ───────────────────────────────────────────────
   if (step === 'danger') {
     const choice = parseChoice(normalised, 3, DANGER_WORDS)
     if (!choice) return retry(ctx, copy.ASK_DANGER)
 
     const danger = DANGER_ANSWERS[choice]
     const next = { ...data, danger }
+    const replyLang = data.language ?? lang
 
     if (danger === 'yes') {
       const priority = PRIORITY.crisis
       return {
-        texts: [say(copy.IN_DANGER, lang)],
+        texts: [say(copy.IN_DANGER, replyLang)],
         state: { flow: 'intake', step: 'escalated', data: next },
         priority,
         summary: summarise({ ...next, priority, trigger: 'answered yes to immediate danger' }),
@@ -269,32 +301,19 @@ export function advance(ctx) {
     }
 
     const texts = []
-    if (danger === 'not sure') texts.push(say(copy.UNSURE_DANGER, lang))
-    texts.push(say(copy.ASK_CITY, lang))
+    if (danger === 'not sure') texts.push(say(copy.UNSURE_DANGER, replyLang))
+    texts.push(say(copy.ASK_CITY, replyLang))
     return { texts, state: { flow: 'intake', step: 'city', data: next } }
   }
 
-  // ── Q2 city or regency ────────────────────────────────────────────────
+  // ── Q3 city or regency ────────────────────────────────────────────────
   if (step === 'city') {
     const city = ctx.text.trim().slice(0, 80)
     if (!city) return retry(ctx, copy.ASK_CITY)
+    const replyLang = data.language ?? lang
     return {
-      texts: [say(copy.ASK_LANGUAGE, lang)],
-      state: { flow: 'intake', step: 'language', data: { ...data, city } },
-    }
-  }
-
-  // ── Q3 preferred language ─────────────────────────────────────────────
-  if (step === 'language') {
-    const choice = parseChoice(normalised, 2, LANGUAGE_WORDS)
-    if (!choice) return retry(ctx, copy.ASK_LANGUAGE)
-
-    const preferred = choice === 2 ? 'en' : 'id'
-    const next = { ...data, language: preferred }
-    return {
-      texts: [say(copy.ASK_NEED, preferred)],
-      state: { flow: 'intake', step: 'need', data: next },
-      language: preferred, // from here on, reply in what they chose
+      texts: [say(copy.ASK_NEED, replyLang)],
+      state: { flow: 'intake', step: 'need', data: { ...data, city } },
     }
   }
 
@@ -336,8 +355,11 @@ export function advance(ctx) {
 }
 
 function retry(ctx, question) {
+  // Once they've chosen a language, re-asks go out in it — not in whatever
+  // the detector made of a one-word reply like "hmm".
+  const lang = ctx.state?.data?.language ?? ctx.lang
   return {
-    texts: [say(copy.DIDNT_UNDERSTAND, ctx.lang), say(question, ctx.lang)],
+    texts: [say(copy.DIDNT_UNDERSTAND, lang), say(question, lang)],
     state: ctx.state,
   }
 }

@@ -8,6 +8,7 @@ import assert from 'node:assert/strict'
 import { advance, assignPriority, isInBali, mentionsCrisis, parseChoice, PRIORITY } from '../src/intake.js'
 import { normalise } from '../src/flows.js'
 import { EMERGENCY } from '../src/config.js'
+import * as copy from '../src/config.js'
 
 /** Feeds one message into the machine. */
 function send(text, state = { flow: null, step: null, data: {} }, extra = {}) {
@@ -22,9 +23,28 @@ function send(text, state = { flow: null, step: null, data: {} }, extra = {}) {
   })
 }
 
-test('first message gets expectations then the danger question', () => {
+test('the very first message asks the language, and only that', () => {
   const reply = send('halo', undefined, { firstName: 'Kadek' })
 
+  assert.equal(reply.texts.length, 1)
+  const [question] = reply.texts
+
+  // Bilingual, because we do not yet know which they read.
+  assert.match(question, /Bahasa apa yang paling nyaman/)
+  assert.match(question, /Which language are you most comfortable in/)
+  assert.match(question, /1 — Bahasa Indonesia/)
+  assert.match(question, /2 — English/)
+
+  // The greeting has NOT been sent yet — it would be in a guessed language.
+  assert.doesNotMatch(question, /bukan layanan darurat/)
+  assert.equal(reply.state.step, 'language')
+})
+
+test('choosing a language then gets expectations and the danger question', () => {
+  const first = send('halo', undefined, { firstName: 'Kadek' })
+  const reply = send('1', first.state, { firstName: 'Kadek' }) // Bahasa Indonesia
+
+  assert.equal(reply.language, 'id')
   assert.equal(reply.texts.length, 2)
   const [greeting, question] = reply.texts
 
@@ -33,12 +53,52 @@ test('first message gets expectations then the danger question', () => {
   assert.match(greeting, /1–2 hari/)
   assert.match(greeting, /bukan layanan darurat/)
   assert.match(greeting, /119/)
-  assert.match(greeting, new RegExp(EMERGENCY.lisa.id.replace(/\+/g, '\\+')))
   assert.match(greeting, /bisahelpline\.org\/resources/)
   assert.match(greeting, /Kadek/)
 
   assert.match(question, /bahaya langsung/)
   assert.equal(reply.state.step, 'danger')
+})
+
+test('choosing English sends the greeting in English', () => {
+  const first = send('hello', undefined, { lang: 'en' })
+  const reply = send('2', first.state, { lang: 'en' })
+
+  assert.equal(reply.language, 'en')
+  assert.match(reply.texts[0], /not an emergency service/)
+  assert.match(reply.texts[1], /immediate danger/)
+  assert.equal(reply.state.step, 'danger')
+})
+
+test('an unreadable answer to the language question re-asks bilingually', () => {
+  const first = send('halo', undefined)
+  const reply = send('apa ya', first.state)
+
+  assert.equal(reply.state.step, 'language') // did not advance
+  assert.match(reply.texts[0], /1 atau 2/)
+  assert.match(reply.texts[0], /1 or 2/)
+})
+
+test('LISA is gone from the copy entirely', () => {
+  assert.equal('lisa' in EMERGENCY, false)
+  assert.equal(EMERGENCY.ambulance, '119')
+
+  const everything = Object.values(copy)
+    .map((v) => {
+      if (typeof v === 'string') return v
+      if (typeof v === 'function') return v('')
+      if (v && typeof v === 'object') {
+        return Object.values(v)
+          .map((s) => (typeof s === 'function' ? s('') : String(s)))
+          .join('\n')
+      }
+      return ''
+    })
+    .join('\n')
+
+  assert.doesNotMatch(everything, /lisa/i)
+  assert.doesNotMatch(everything, /811 3855 472/)
+  assert.doesNotMatch(everything, /811 3815 472/)
 })
 
 test('answering YES to danger stops intake and escalates', () => {
@@ -79,20 +139,20 @@ test('"not sure" carries a safety note and raises priority', () => {
   )
 })
 
-test('full happy path: greeting to queued', () => {
+test('full happy path: language to queued', () => {
   let reply = send('halo', undefined)
+  assert.equal(reply.state.step, 'language')
+
+  reply = send('1', reply.state) // Bahasa Indonesia
   assert.equal(reply.state.step, 'danger')
+  assert.equal(reply.language, 'id')
 
   reply = send('2', reply.state) // no danger
   assert.equal(reply.state.step, 'city')
 
   reply = send('Denpasar', reply.state)
-  assert.equal(reply.state.step, 'language')
-  assert.equal(reply.state.data.city, 'Denpasar')
-
-  reply = send('1', reply.state) // Bahasa Indonesia
   assert.equal(reply.state.step, 'need')
-  assert.equal(reply.language, 'id')
+  assert.equal(reply.state.data.city, 'Denpasar')
 
   reply = send('2', reply.state) // anxiety/panic
   assert.equal(reply.state.step, 'queued')
@@ -109,12 +169,14 @@ test('full happy path: greeting to queued', () => {
   assert.equal(send('masih nunggu nih', reply.state), null)
 })
 
-test('language choice switches the reply, and sticks', () => {
-  const state = { flow: 'intake', step: 'language', data: { danger: 'no', city: 'Ubud' } }
-  const reply = send('2', state) // English
+test('the chosen language sticks through later steps', () => {
+  // Chose English up front; the detector would read these replies as
+  // Indonesian, but the stored preference must win.
+  const state = { flow: 'intake', step: 'city', data: { danger: 'no', language: 'en' } }
+  const reply = send('Ubud', state, { lang: 'id' })
 
-  assert.equal(reply.language, 'en')
   assert.match(reply.texts[0], /What support do you need today/)
+  assert.equal(reply.state.step, 'need')
 })
 
 test('crisis language escalates at any step, whatever the question was', () => {
@@ -143,7 +205,6 @@ test('self-harm option is Crisis even when they said no immediate danger', () =>
   const reply = send('4', state)
 
   assert.equal(reply.priority, PRIORITY.crisis)
-  assert.match(reply.texts.join('\n'), new RegExp(EMERGENCY.lisa.id.replace(/\+/g, '\\+')))
   assert.match(reply.texts.join('\n'), /3 tanda/) // safety-plan starter
 })
 
