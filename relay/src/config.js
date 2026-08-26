@@ -47,7 +47,6 @@ export const GREETING = {
 
 Kalau ada bahaya langsung terhadap keselamatanmu atau orang lain, jangan menunggu balasan kami:
 • Telepon ${EMERGENCY.ambulance}, atau langsung ke IGD rumah sakit terdekat
-• LISA Helpline, buka 24 jam: ${EMERGENCY.lisa.id}
 
 Sambil menunggu, ada beberapa hal yang mungkin membantu: ${ORG.resourcesURL}`,
 
@@ -60,7 +59,6 @@ Sambil menunggu, ada beberapa hal yang mungkin membantu: ${ORG.resourcesURL}`,
 
 If you or someone else is in immediate danger, please don't wait for us:
 • Call ${EMERGENCY.ambulance}, or go to the nearest hospital emergency department (IGD)
-• LISA Helpline, open 24 hours: ${EMERGENCY.lisa.en}
 
 While you wait, some things that might help: ${ORG.resourcesURL}`,
 }
@@ -141,7 +139,6 @@ export const IN_DANGER = {
 Tolong hubungi salah satu ini sekarang — semuanya buka 24 jam:
 
 • ${EMERGENCY.ambulance} (ambulans / gawat darurat), atau langsung ke IGD rumah sakit terdekat
-• LISA Helpline: ${EMERGENCY.lisa.id} — bisa telepon atau WhatsApp, dalam Bahasa Indonesia
 
 Kalau bisa, minta seseorang yang kamu percaya untuk menemanimu sekarang. Kalau ada obat atau benda yang bisa melukaimu di dekatmu, coba titipkan dulu ke orang lain.
 
@@ -152,7 +149,6 @@ Kamu tidak sendirian. Pesanmu sudah kami tandai sebagai prioritas tertinggi, dan
 Please contact one of these now — all are open 24 hours:
 
 • ${EMERGENCY.ambulance} (ambulance / emergency), or go straight to the nearest hospital emergency department (IGD)
-• LISA Helpline: ${EMERGENCY.lisa.en} — call or WhatsApp, in English
 
 If you can, ask someone you trust to stay with you right now. If there are medicines or objects nearby that could hurt you, try to give them to someone else to hold.
 
@@ -160,11 +156,11 @@ You are not alone. We've marked your message as our highest priority and a volun
 }
 
 export const UNSURE_DANGER = {
-  id: `Terima kasih sudah jujur. Kalau keadaannya berubah dan kamu merasa tidak aman, jangan menunggu kami — telepon ${EMERGENCY.ambulance} atau LISA di ${EMERGENCY.lisa.id}, buka 24 jam.
+  id: `Terima kasih sudah jujur. Kalau keadaannya berubah dan kamu merasa tidak aman, jangan menunggu kami — telepon ${EMERGENCY.ambulance}.
 
 Beberapa pertanyaan lagi, ya.`,
 
-  en: `Thank you for being honest. If things change and you feel unsafe, please don't wait for us — call ${EMERGENCY.ambulance} or LISA on ${EMERGENCY.lisa.en}, open 24 hours.
+  en: `Thank you for being honest. If things change and you feel unsafe, please don't wait for us — call ${EMERGENCY.ambulance}.
 
 Just a couple more questions.`,
 }
@@ -182,15 +178,11 @@ export const WAITING_INTRO = {
 export const WAITING_CLOSE = {
   id: `Kamu tidak harus menghadapi ini sendirian. Seorang relawan akan meninjau permintaanmu.
 
-Yang bisa kamu harapkan dari ${ORG.name}: relawan terlatih yang mendengarkan tanpa menghakimi, dalam Bahasa Indonesia atau Inggris. Kami tidak memberi diagnosis atau resep, dan kami bukan layanan darurat — tapi kami bisa membantumu mencari rujukan kalau kamu membutuhkannya.
-
-Kalau keadaanmu memburuk sebelum kami sempat membalas, LISA buka 24 jam di ${EMERGENCY.lisa.id}.`,
+Yang bisa kamu harapkan dari ${ORG.name}: relawan terlatih yang mendengarkan tanpa menghakimi, dalam Bahasa Indonesia atau Inggris. Kami tidak memberi diagnosis atau resep, dan kami bukan layanan darurat — tapi kami bisa membantumu mencari rujukan kalau kamu membutuhkannya.`,
 
   en: `You do not have to deal with this alone. A volunteer will review your request.
 
-What to expect from ${ORG.name}: a trained volunteer who listens without judging, in Indonesian or English. We don't diagnose or prescribe, and we're not an emergency service — but we can help you find a referral if you need one.
-
-If things get worse before we reply, LISA is open 24 hours on ${EMERGENCY.lisa.en}.`,
+What to expect from ${ORG.name}: a trained volunteer who listens without judging, in Indonesian or English. We don't diagnose or prescribe, and we're not an emergency service — but we can help you find a referral if you need one.`,
 }
 
 /** Grounding steps, for panic. */
@@ -215,16 +207,12 @@ export const RESOURCE_SAFETY_PLAN = {
   id: `Sambil menunggu, mungkin membantu untuk menuliskan tiga hal di HP-mu:
 • 3 tanda kamu mulai merasa tidak aman
 • 2 hal yang pernah menolongmu melewatinya
-• 1 orang yang bisa kamu hubungi kapan saja
-
-Kalau kamu ingin bicara sekarang juga, LISA buka 24 jam di ${EMERGENCY.lisa.id}.`,
+• 1 orang yang bisa kamu hubungi kapan saja`,
 
   en: `While you wait, it can help to write three things down in your phone:
 • 3 signs that you're starting to feel unsafe
 • 2 things that have helped you through it before
-• 1 person you could contact at any hour
-
-If you want to talk to someone right now, LISA is open 24 hours on ${EMERGENCY.lisa.en}.`,
+• 1 person you could contact at any hour`,
 }
 
 /** Recovery and addiction community programmes. */
@@ -242,11 +230,11 @@ export const RESOURCE_RECOVERY = {
 export const RESOURCE_SUPPORT_FRIEND = {
   id: `Kalau kamu sedang mendampingi orang lain: dengarkan tanpa buru-buru memberi solusi, tanya langsung dan tenang apa yang mereka rasakan, dan jangan tinggalkan mereka sendirian kalau kamu merasa mereka dalam bahaya. Kamu tidak harus punya jawabannya — hadir saja sudah berarti.
 
-Panduan lebih lengkap: https://www.intothelightid.org/menolong-orang-lain/`,
+Panduan lebih lengkap: https://bisahelpline.org/resources/`,
 
   en: `If you're supporting someone else: listen without rushing to fix it, ask them directly and calmly how they're doing, and don't leave them alone if you think they're in danger. You don't need to have the answers — being there already matters.
 
-A fuller guide: https://www.intothelightid.org/menolong-orang-lain/`,
+A fuller guide: https://bisahelpline.org/resources/`,
 }
 
 /** Local referrals, in and out of Bali. */
@@ -263,6 +251,6 @@ export const RESOURCE_REFERRAL_OUTSIDE = {
 
 /** Sent once if they message again after being queued. Not a re-intake. */
 export const ALREADY_QUEUED = {
-  id: `Kami masih menyimpan permintaanmu dan relawan kami akan menghubungimu. Kalau ada yang mendesak, LISA buka 24 jam di ${EMERGENCY.lisa.id}.`,
-  en: `We still have your request and a volunteer will be in touch. If anything becomes urgent, LISA is open 24 hours on ${EMERGENCY.lisa.en}.`,
+  id: `Kami masih menyimpan permintaanmu dan relawan kami akan menghubungimu.`,
+  en: `We still have your request and a volunteer will be in touch.`,
 }
